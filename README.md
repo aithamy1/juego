@@ -6,7 +6,7 @@ MVP de un juego incremental de cría y coleccionismo de dinosaurios hecho con **
 
 - [LÖVE 11.5](https://love2d.org/) para jugar.
 - `luajit` para ejecutar los tests fuera del motor.
-- No hay dependencias externas ni assets: todo el arte se dibuja con `love.graphics`.
+- Todo el arte del juego se dibuja con `love.graphics`. La interfaz usa **Pixelify Sans** (SIL OFL), incluida en `assets/fonts`.
 
 ## Ejecutar
 
@@ -50,6 +50,7 @@ Los tests cubren:
 ```
 main.lua                 arranque, canvas, escala, guardado y entrada
 conf.lua                 ventana 1280×720, redimensionable, sin audio
+assets/fonts/            Pixelify Sans y su licencia OFL
 lib/json.lua             JSON propio y determinista
 src/game/                lógica pura, sin love.*
   config.lua             única fuente de verdad de tasas, tiempos y costes
@@ -64,6 +65,10 @@ src/render/dino.lua      dinosaurios por capas, huevos y mutaciones
 src/ui/                  tema, widgets, escenas y modales
 tests/                   runner y suites con luajit
 ```
+
+## Interfaz
+
+La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, mejoras rápidas y prestigio a la derecha, fuente pixel-art y paneles con bisel. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central agrupa los huevos; el Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
 
 ## Cómo se juega
 
@@ -122,6 +127,7 @@ La especificación no fijaba estos detalles; se resolvieron así:
 16. **Audio**: fuera del alcance; el módulo de audio está desactivado para que el juego arranque sin dispositivos de sonido.
 17. **Pity**: la garantía sustituye la tirada en el huevo número `rareAt`, `legendaryAt` o `mutationAt` desde el último resultado correspondiente. Los contadores se reinician solo al obtener ese resultado.
 18. **Rendimiento**: la rejilla del criadero solo dibuja las tarjetas visibles. Se probó la carga y el desplazamiento con 200 ejemplares; la tasa de 60 FPS depende de la GPU (el entorno de desarrollo usa render por software y no permite validarla).
+19. **Fuente**: Pixelify Sans se incluye bajo SIL OFL para acercar la interfaz a la referencia pixel-art; no se usan imágenes externas.
 
 ## Empaquetar un `.love`
 
@@ -134,4 +140,4 @@ Luego se puede abrir el archivo con LÖVE o distribuir el `.love`.
 
 ## Fuera de alcance
 
-Multijugador, cuentas, ranking, intercambio, compras con dinero real, anuncios, cruces entre especies, edición genética, sonido y assets externos.
+Multijugador, cuentas, ranking, intercambio, compras con dinero real, anuncios, cruces entre especies, edición genética, sonido, imágenes o sonidos externos.
