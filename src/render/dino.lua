@@ -1,15 +1,12 @@
--- Dinosaurios pixel-art de rejilla. Solo esta capa usa love.graphics.
+-- Dinosaurios pixel-art de 64x40. Solo esta capa usa love.graphics.
 local config = require("src.game.config")
+local templates = require("src.render.dino_sprites")
 
 local render = {}
 
-local W, H = 32, 24
-
-local function clamp01(v)
-  if v < 0 then return 0 end
-  if v > 1 then return 1 end
-  return v
-end
+local W, H = 64, 40
+local PIXEL = 3.0
+local ORIGIN_X, ORIGIN_Y = 32, 27
 
 local function mix(a, b, t)
   return {
@@ -41,352 +38,147 @@ local function palette(dino)
     secondary = mix(secondary, { 0.92, 1.0, 1.0 }, 0.60)
   end
 
-  local eye = { 0.04, 0.04, 0.04 }
+  local eye = { 0.08, 0.08, 0.10 }
   if mutation == "albino" then
-    eye = { 0.72, 0.16, 0.12 }
+    eye = { 0.62, 0.18, 0.14 }
   elseif mutation == "fantasma" then
-    eye = { 0.55, 0.95, 0.92 }
+    eye = { 0.45, 0.88, 0.86 }
   elseif mutation == "melanico" then
     eye = { 0.92, 0.90, 0.70 }
   end
 
   return {
     body = primary,
-    shade = mix(primary, { 0.02, 0.02, 0.02 }, 0.42),
-    light = mix(primary, { 1, 1, 1 }, 0.28),
+    light = mix(primary, { 1, 1, 1 }, 0.30),
+    shade = mix(primary, { 0.02, 0.02, 0.02 }, 0.30),
     belly = secondary,
     feature = secondary,
-    featureShade = mix(secondary, { 0.02, 0.02, 0.02 }, 0.38),
-    horn = { 0.94, 0.88, 0.70 },
-    outline = mix(primary, { 0.01, 0.01, 0.01 }, 0.84),
+    featureLight = mix(secondary, { 1, 1, 1 }, 0.28),
+    featureShade = mix(secondary, { 0.02, 0.02, 0.02 }, 0.32),
+    horn = { 0.93, 0.88, 0.72 },
+    hornShade = { 0.76, 0.70, 0.54 },
+    outline = mix(primary, { 0.01, 0.01, 0.01 }, 0.86),
     eye = eye,
+    crest = { 1.0, 0.78, 0.22 },
+    pattern = mix(secondary, primary, 0.18),
   }
 end
 
-local function newGrid()
-  local g = { cells = {}, w = W, h = H }
+local crestSpots = {
+  triceratops = { 52, 15 },
+  velociraptor = { 44, 16 },
+  parasaurolophus = { 50, 16 },
+  pteranodon = { 44, 18 },
+  stegosaurus = { 47, 24 },
+  ankylosaurus = { 47, 27 },
+}
+
+local function emptyGrid()
+  local g = {}
   for y = 1, H do
     local row = {}
     for x = 1, W do
       row[x] = "."
     end
-    g.cells[y] = row
+    g[y] = row
   end
   return g
 end
 
-local function set(g, x, y, ch)
-  x, y = math.floor(x + 0.5), math.floor(y + 0.5)
-  if x >= 1 and x <= W and y >= 1 and y <= H then
-    g.cells[y][x] = ch
-  end
-end
-
-local function get(g, x, y)
-  if x < 1 or x > W or y < 1 or y > H then
-    return "."
-  end
-  return g.cells[y][x]
-end
-
-local function rect(g, x, y, w, h, ch)
-  for yy = y, y + h - 1 do
-    for xx = x, x + w - 1 do
-      set(g, xx, yy, ch)
+local function parseTemplate(species)
+  local raw = templates[species] or templates.triceratops
+  raw = raw:gsub("^%s*\n", ""):gsub("\n%s*$", "")
+  local g = emptyGrid()
+  local y = 0
+  for line in raw:gmatch("[^\n]+") do
+    y = y + 1
+    if y <= H then
+      for x = 1, math.min(#line, W) do
+        g[y][x] = line:sub(x, x)
+      end
     end
   end
+  return g
 end
 
-local function ellipse(g, cx, cy, rx, ry, ch)
-  for y = math.floor(cy - ry), math.ceil(cy + ry) do
-    for x = math.floor(cx - rx), math.ceil(cx + rx) do
-      local nx = (x - cx) / rx
-      local ny = (y - cy) / ry
-      if nx * nx + ny * ny <= 1.02 then
-        set(g, x, y, ch)
+local function applyPattern(g, pattern)
+  if not pattern or pattern == "liso" then
+    return
+  end
+  for y = 1, H do
+    for x = 1, W do
+      local ch = g[y][x]
+      if ch == "b" or ch == "l" then
+        local paint = false
+        if pattern == "rayado" then
+          paint = (x + y * 2) % 9 <= 1
+        elseif pattern == "moteado" then
+          paint = hash(x * 13 + y * 7) > 0.86
+        elseif pattern == "manchas" then
+          paint = hash(math.floor(x / 3) * 17 + math.floor(y / 2) * 11) > 0.72
+        end
+        if paint then
+          g[y][x] = "p"
+        end
       end
     end
   end
 end
 
-local function polygon(g, points, ch)
-  local minY, maxY = 999, -999
-  for i = 1, #points, 2 do
-    local y = points[i + 1]
-    if y < minY then minY = y end
-    if y > maxY then maxY = y end
-  end
-  for y = math.floor(minY), math.ceil(maxY) do
-    local xs = {}
-    local count = #points / 2
-    for i = 1, count do
-      local x1 = points[i * 2 - 1]
-      local y1 = points[i * 2]
-      local j = i % count + 1
-      local x2 = points[j * 2 - 1]
-      local y2 = points[j * 2]
-      if (y1 <= y and y2 > y) or (y2 <= y and y1 > y) then
-        xs[#xs + 1] = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
-      end
-    end
-    table.sort(xs)
-    for i = 1, #xs - 1, 2 do
-      local from = math.ceil(xs[i] - 0.5)
-      local to = math.floor(xs[i + 1] - 0.5)
-      for x = from, to do
-        set(g, x, y, ch)
-      end
-    end
-  end
-end
-
-local function pixelLine(g, x1, y1, x2, y2, ch)
-  local dx = math.abs(x2 - x1)
-  local dy = math.abs(y2 - y1)
-  local sx = x1 < x2 and 1 or -1
-  local sy = y1 < y2 and 1 or -1
-  local err = dx - dy
-  while true do
-    set(g, x1, y1, ch)
-    if x1 == x2 and y1 == y2 then break end
-    local e2 = err * 2
-    if e2 > -dy then err = err - dy; x1 = x1 + sx end
-    if e2 < dx then err = err + dx; y1 = y1 + sy end
-  end
-end
-
-local crestSpots = {
-  triceratops = { 19, 5 },
-  velociraptor = { 23, 6 },
-  parasaurolophus = { 24, 3 },
-  pteranodon = { 19, 7 },
-  stegosaurus = { 24, 11 },
-  ankylosaurus = { 24, 11 },
-}
-
-local function buildGrid(dino, silhouette)
-  local species = dino.species or "triceratops"
+local function applyCrest(g, dino)
   local genes = dino.genes or {}
-  local g = newGrid()
-
-  if species == "triceratops" then
-    ellipse(g, 23, 11, 8, 7, "v")          -- gola
-    ellipse(g, 13, 15, 9, 6, "b")          -- cuerpo
-    polygon(g, { 2, 13, 4, 11, 8, 14, 8, 18, 3, 18 }, "b")
-    ellipse(g, 25, 12, 5, 5, "b")          -- cabeza
-    polygon(g, { 18, 12, 23, 8, 27, 9, 27, 15, 20, 16 }, "b")
-    rect(g, 5, 18, 3, 6, "b")
-    rect(g, 9, 19, 3, 5, "b")
-    rect(g, 16, 18, 3, 6, "b")
-    rect(g, 21, 19, 3, 5, "b")
-    ellipse(g, 14, 19, 7, 2, "n")
-    polygon(g, { 20, 8, 18, 3, 22, 7 }, "h")
-    polygon(g, { 26, 8, 29, 3, 24, 7 }, "h")
-    polygon(g, { 29, 11, 32, 7, 28, 10 }, "h")
-    polygon(g, { 28, 14, 32, 15, 28, 17 }, "h")
-  elseif species == "parasaurolophus" then
-    polygon(g, { 1, 11, 3, 9, 7, 13, 7, 18, 2, 18 }, "b")
-    ellipse(g, 14, 15, 8, 5, "b")
-    polygon(g, { 20, 13, 22, 7, 28, 7, 28, 14, 20, 14 }, "b")
-    ellipse(g, 27, 7, 4, 3, "b")
-    rect(g, 12, 18, 3, 6, "b")
-    rect(g, 18, 18, 3, 6, "b")
-    rect(g, 24, 13, 2, 4, "b")
-    ellipse(g, 14, 18, 6, 2, "n")
-    polygon(g, { 26, 5, 18, 1, 15, 2, 23, 6 }, "v")
-    polygon(g, { 29, 8, 32, 9, 29, 11 }, "h")
-  elseif species == "stegosaurus" then
-    polygon(g, { 1, 14, 4, 12, 8, 15, 7, 18, 1, 18 }, "b")
-    ellipse(g, 14, 15, 10, 5, "b")
-    polygon(g, { 22, 14, 26, 14, 27, 17, 22, 18 }, "b")
-    ellipse(g, 27, 16, 4, 3, "b")
-    rect(g, 4, 18, 3, 6, "b")
-    rect(g, 8, 19, 3, 5, "b")
-    rect(g, 16, 18, 3, 6, "b")
-    rect(g, 20, 19, 3, 5, "b")
-    ellipse(g, 14, 19, 8, 2, "n")
-    local plates = {
-      { 5, 6 }, { 12, 8 }, { 19, 8 }, { 26, 6 },
-    }
-    for _, plate in ipairs(plates) do
-      local px, ph = plate[1], plate[2]
-      for row = 0, ph - 1 do
-        local w = math.max(1, math.floor(7 * (1 - row / ph) + 0.5))
-        local half = math.floor((w - 1) / 2)
-        for xx = px - half, px + half do
-          set(g, xx, 12 - row, "v")
-        end
-        set(g, px - half - 1, 12 - row, "o")
-        set(g, px + half + 1, 12 - row, "o")
-      end
-      set(g, px, 12 - ph, "o")
-    end
-    polygon(g, { 1, 12, 0, 8, 3, 13 }, "h")
-    polygon(g, { 1, 18, 0, 21, 3, 18 }, "h")
-  elseif species == "ankylosaurus" then
-    polygon(g, { 1, 15, 5, 13, 8, 16, 6, 19, 1, 19 }, "b")
-    ellipse(g, 2, 17, 3, 3, "b")
-    ellipse(g, 14, 16, 10, 5, "b")
-    ellipse(g, 26, 16, 4, 4, "b")
-    rect(g, 4, 19, 3, 5, "b")
-    rect(g, 9, 20, 3, 4, "b")
-    rect(g, 17, 19, 3, 5, "b")
-    rect(g, 21, 20, 3, 4, "b")
-    ellipse(g, 14, 20, 8, 2, "n")
-    for i = 0, 4 do
-      local ax = 5 + i * 4
-      rect(g, ax, 11, 3, 2, "v")
-      rect(g, ax + 1, 14, 3, 2, "v")
-    end
-    polygon(g, { 1, 12, 0, 8, 3, 12 }, "h")
-    polygon(g, { 1, 21, 0, 23, 3, 21 }, "h")
-    polygon(g, { 5, 9, 7, 6, 8, 10 }, "h")
-  elseif species == "pteranodon" then
-    polygon(g, { 11, 12, 3, 2, 8, 0, 17, 10 }, "v")
-    polygon(g, { 17, 12, 24, 1, 30, 4, 20, 14 }, "v")
-    ellipse(g, 15, 15, 5, 4, "b")
-    ellipse(g, 22, 12, 4, 3, "b")
-    rect(g, 13, 19, 2, 4, "b")
-    rect(g, 17, 19, 2, 4, "b")
-    ellipse(g, 15, 17, 4, 2, "n")
-    polygon(g, { 20, 10, 16, 7, 22, 8 }, "v")
-    polygon(g, { 25, 11, 32, 10, 25, 13 }, "h")
-  else -- velociraptor
-    polygon(g, { 1, 10, 4, 9, 8, 14, 5, 17, 1, 17 }, "b")
-    ellipse(g, 14, 14, 7, 4, "b")
-    polygon(g, { 20, 12, 23, 8, 27, 9, 28, 13, 21, 14 }, "b")
-    ellipse(g, 24, 10, 4, 3, "b")
-    rect(g, 12, 17, 3, 7, "b")
-    rect(g, 18, 17, 3, 7, "b")
-    rect(g, 23, 13, 2, 3, "b")
-    ellipse(g, 14, 17, 5, 2, "n")
-    polygon(g, { 1, 10, 4, 9, 6, 12, 2, 13 }, "v")
-    polygon(g, { 10, 15, 12, 14, 11, 17 }, "v")
-    polygon(g, { 12, 23, 10, 23, 12, 21 }, "h")
-    polygon(g, { 18, 23, 20, 23, 18, 21 }, "h")
+  local crest = genes.crest
+  if not crest or crest == "ninguna" then
+    return
   end
-
-  -- sombreado por bandas
-  for y = 1, H do
-    for x = 1, W do
-      if g.cells[y][x] == "b" then
-        if y <= 11 then
-          g.cells[y][x] = "l"
-        elseif y >= 17 then
-          g.cells[y][x] = "s"
+  local spot = crestSpots[dino.species or "triceratops"]
+  if not spot then
+    return
+  end
+  local isBig = crest == "grande"
+  local blockW = 2
+  local blockH = isBig and 3 or 1
+  local function isSkin(ch)
+    return ch == "b" or ch == "l" or ch == "s" or ch == "n"
+  end
+  local ax, ay = spot[1], spot[2]
+  for radius = 0, 5 do
+    for dy = -radius, radius do
+      for dx = -radius, radius do
+        local x, y = ax + dx, ay + dy
+        if x >= 1 and x <= W and y >= 1 and y <= H and isSkin(g[y][x]) then
+          local painted = 0
+          for yy = y, math.min(H, y + blockH - 1) do
+            for xx = x, math.min(W, x + blockW - 1) do
+              if isSkin(g[yy][xx]) then
+                g[yy][xx] = "c"
+                painted = painted + 1
+              end
+            end
+          end
+          if painted > 0 then
+            return
+          end
         end
       end
     end
   end
+end
 
-  -- patrón genético
-  local pattern = genes.pattern or "liso"
-  if pattern ~= "liso" then
+local function buildGrid(dino, opts)
+  local g = parseTemplate(dino.species or "triceratops")
+  applyPattern(g, (dino.genes or {}).pattern or "liso")
+  applyCrest(g, dino)
+
+  if opts.silhouette then
     for y = 1, H do
       for x = 1, W do
-        local ch = g.cells[y][x]
-        if ch == "b" or ch == "l" or ch == "s" then
-          local paint = false
-          if pattern == "rayado" then
-            paint = (x + y) % 7 <= 1
-          elseif pattern == "moteado" then
-            paint = hash(x * 7 + y * 13) > 0.80
-          elseif pattern == "manchas" then
-            paint = hash(math.floor(x / 3) * 17 + math.floor(y / 2) * 11) > 0.63
-          end
-          if paint then
-            g.cells[y][x] = "s"
-          end
+        if g[y][x] ~= "." then
+          g[y][x] = "o"
         end
       end
     end
   end
-
-  -- cresta genética discreta en la cabeza
-  if genes.crest and genes.crest ~= "ninguna" then
-    local spot = crestSpots[species]
-    if spot then
-      set(g, spot[1], spot[2], "v")
-      if genes.crest == "grande" then
-        set(g, spot[1] + 1, spot[2] - 1, "v")
-      end
-    end
-  end
-
-  -- separar rasgos del cuerpo antes del contorno exterior
-  local bodyChars = { b = true, l = true, s = true, n = true }
-  local featureChars = { v = true, h = true }
-  local toOutline = {}
-  for y = 1, H do
-    for x = 1, W do
-      if featureChars[g.cells[y][x]] then
-        local neighbors = { { x - 1, y }, { x + 1, y }, { x, y - 1 }, { x, y + 1 } }
-        for _, n in ipairs(neighbors) do
-          if bodyChars[get(g, n[1], n[2])] then
-            toOutline[#toOutline + 1] = n
-          end
-        end
-      end
-    end
-  end
-  for _, n in ipairs(toOutline) do
-    set(g, n[1], n[2], "o")
-  end
-
-  -- contorno exterior
-  local exterior = {}
-  for y = 1, H do
-    for x = 1, W do
-      local ch = g.cells[y][x]
-      if ch ~= "." and ch ~= "o" then
-        local neighbors = { { x - 1, y }, { x + 1, y }, { x, y - 1 }, { x, y + 1 } }
-        for _, n in ipairs(neighbors) do
-          if get(g, n[1], n[2]) == "." then
-            exterior[#exterior + 1] = n
-          end
-        end
-      end
-    end
-  end
-  for _, n in ipairs(exterior) do
-    set(g, n[1], n[2], "o")
-  end
-
-  if silhouette then
-    for y = 1, H do
-      for x = 1, W do
-        if g.cells[y][x] ~= "." then
-          g.cells[y][x] = "o"
-        end
-      end
-    end
-    return g
-  end
-
-  -- ojos y boca después del contorno
-  local eyes = {
-    triceratops = { 27, 12 },
-    parasaurolophus = { 28, 7 },
-    stegosaurus = { 28, 16 },
-    ankylosaurus = { 28, 16 },
-    pteranodon = { 23, 12 },
-    velociraptor = { 25, 10 },
-  }
-  local eye = eyes[species] or eyes.triceratops
-  set(g, eye[1], eye[2], "e")
-  set(g, eye[1], eye[2] - 1, "e")
-  if species == "triceratops" then
-    pixelLine(g, 29, 16, 31, 15, "o")
-  elseif species == "parasaurolophus" then
-    pixelLine(g, 29, 10, 31, 10, "o")
-  elseif species == "stegosaurus" or species == "ankylosaurus" then
-    pixelLine(g, 27, 18, 29, 18, "o")
-  elseif species == "pteranodon" then
-    pixelLine(g, 24, 13, 30, 12, "o")
-  else
-    pixelLine(g, 25, 12, 27, 11, "o")
-  end
-
   return g
 end
 
@@ -425,22 +217,28 @@ local function spriteFor(dino, opts)
   love.graphics.setCanvas(canvas)
   love.graphics.clear(0, 0, 0, 0)
   local p = palette(dino)
-  local g = buildGrid(dino, opts.silhouette)
+  local g = buildGrid(dino, opts)
 
   local colorFor = {
     b = p.body,
-    s = p.shade,
     l = p.light,
+    s = p.shade,
     n = p.belly,
-    v = p.feature,
+    f = p.feature,
+    g = p.featureLight,
+    q = p.featureShade,
     h = p.horn,
+    y = p.hornShade,
     o = p.outline,
     e = p.eye,
+    w = { 0.99, 0.98, 0.94 },
+    c = p.crest,
+    p = p.pattern,
   }
 
   for y = 1, H do
     for x = 1, W do
-      local ch = g.cells[y][x]
+      local ch = g[y][x]
       if ch ~= "." then
         local rgb = colorFor[ch] or p.outline
         love.graphics.setColor(rgb[1], rgb[2], rgb[3], 1)
@@ -480,13 +278,13 @@ function render.drawDino(dino, x, y, scale, opts)
     finalScale = finalScale * 1.24
   end
   local flip = opts.flip and -1 or 1
-  local ps = 5 * finalScale
+  local ps = PIXEL * finalScale
 
   -- sombra pixelada
   love.graphics.setColor(0, 0, 0, 0.24 * alpha)
   for i = -3, 3 do
     local width = 50 * finalScale * (1 - math.abs(i) * 0.11)
-    love.graphics.rectangle("fill", x - width, y + 44 * finalScale + i * 2 * finalScale, width * 2, 2 * finalScale + 1)
+    love.graphics.rectangle("fill", x - width, y + 37 * finalScale + i * 2 * finalScale, width * 2, 2 * finalScale + 1)
   end
 
   if mutation == "bioluminiscente" and not opts.silhouette then
@@ -494,14 +292,14 @@ function render.drawDino(dino, x, y, scale, opts)
     love.graphics.setBlendMode("add")
     for i = 4, 1, -1 do
       love.graphics.setColor(p.body[1], p.body[2], p.body[3], 0.035 * alpha * i)
-      love.graphics.circle("fill", x, y - 4 * finalScale, (34 + i * 9) * finalScale)
+      love.graphics.circle("fill", x, y - 4 * finalScale, (52 + i * 10) * finalScale)
     end
     love.graphics.setBlendMode("alpha")
   end
 
   local canvas = spriteFor(dino, opts)
   love.graphics.setColor(1, 1, 1, alpha)
-  love.graphics.draw(canvas, x, y, 0, ps * flip, ps, 16, 14)
+  love.graphics.draw(canvas, x, y, 0, ps * flip, ps, ORIGIN_X, ORIGIN_Y)
   love.graphics.setColor(1, 1, 1, 1)
 end
 

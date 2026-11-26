@@ -61,7 +61,8 @@ src/game/                lógica pura, sin love.*
   prestige.lua           Gran Migración
   state.lua              estado y acciones
   save.lua               serialización, versión y migraciones
-src/render/dino.lua      dinosaurios por capas, huevos y mutaciones
+src/render/dino.lua      dinosaurios, huevos y mutaciones
+src/render/dino_sprites.lua  plantillas pixel-art de 64×40
 src/ui/                  tema, widgets, escenas y modales
 tests/                   runner y suites con luajit
 ```
@@ -72,7 +73,7 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 
 ## Dinosaurios
 
-Los dinosaurios son sprites de píxel de rejilla 32×24 cacheados: contorno oscuro de un píxel, tres tonos de cuerpo y formas planas, como en las referencias. Cada especie tiene silueta propia, ojo negro, pico, garras y sus rasgos distintivos: gola y cuernos del Triceratops, plumas y garra del Velociraptor, cresta tubular del Parasaurolophus, alas del Pteranodon, placas del Stegosaurus y coraza y maza del Ankylosaurus. Los genes de patrón, colores, cresta y mutación se aplican sobre la rejilla; la pradera los mueve y los gira.
+Los dinosaurios son sprites de píxel de **64×40** dibujados a mano píxel a píxel y cacheados: contorno oscuro de un píxel, cuerpo plano, panza clara y una sombra de píxel. Cada especie tiene una silueta propia y reconocible, con ojo grande, pico y sus rasgos distintivos: gola y cuernos del Triceratops, plumas y garra del Velociraptor, cresta tubular del Parasaurolophus, alas y cresta del Pteranodon, placas del Stegosaurus y coraza y maza del Ankylosaurus. Las plantillas viven en `src/render/dino_sprites.lua`; los genes de patrón, color, cresta y mutación se aplican encima y la pradera los mueve y los gira.
 
 ## Cómo se juega
 
