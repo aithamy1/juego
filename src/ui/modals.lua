@@ -1,0 +1,779 @@
+-- Modales: transparencia, apertura de huevos, liberación, Dinodex y prestigio.
+local config = require("src.game.config")
+local stateModule = require("src.game.state")
+local economy = require("src.game.economy")
+local hatch = require("src.game.hatch")
+local prestige = require("src.game.prestige")
+local theme = require("src.ui.theme")
+local widgets = require("src.ui.widgets")
+local render = require("src.render.dino")
+
+local modals = {}
+
+local function closeButton(app, x, y, w, h, label)
+  widgets.button(app, x, y, w, h, label or "Cerrar", {
+    style = "secondary",
+    onClick = function()
+      app:closeModal()
+    end,
+  })
+end
+
+local function geneSummary(genes)
+  if not genes then
+    return ""
+  end
+  return table.concat({
+    config.patterns[genes.pattern] and config.patterns[genes.pattern].name or genes.pattern,
+    config.colors[genes.primaryColor] and config.colors[genes.primaryColor].name or genes.primaryColor,
+    config.secondaryColors[genes.secondaryColor] and config.secondaryColors[genes.secondaryColor].name or genes.secondaryColor,
+    config.crests[genes.crest] and config.crests[genes.crest].name or genes.crest,
+  }, " · ")
+end
+
+local function guaranteesText(guaranteed)
+  if not guaranteed then
+    return nil
+  end
+  local parts = {}
+  if guaranteed.rare then
+    parts[#parts + 1] = "Garantía de raro"
+  end
+  if guaranteed.legendary then
+    parts[#parts + 1] = "Garantía de legendario"
+  end
+  if guaranteed.mutation then
+    parts[#parts + 1] = "Garantía de mutación"
+  end
+  if #parts == 0 then
+    return nil
+  end
+  return table.concat(parts, " · ")
+end
+
+-- Ayuda
+local function drawHelp(app, modal)
+  local x, y = widgets.modalFrame(app, "Cómo se juega", "Un incremental de cría sin prisas, sin anuncios y sin dinero real.", 840, 600)
+  theme.setFont(13)
+  theme.setColor(theme.colors.amber, 1)
+  love.graphics.print("El bucle", x + 28, y + 94)
+  theme.setFont(11)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf("El nido produce huevos. Los incubas, nacen dinosaurios y los adultos generan ámbar de forma pasiva. Con ámbar compras mejoras; con esencia (al liberar ejemplares) amplías el nido y mejoras la suerte. Los cruces heredan genes con proporciones mendelianas y el Dinodex registra cada combinación nueva. Cuando quieras, la Gran Migración reinicia la colonia a cambio de legado permanente.",
+    x + 28, y + 118, 784, "left")
+
+  theme.setFont(13)
+  theme.setColor(theme.colors.amber, 1)
+  love.graphics.print("Transparencia", x + 28, y + 210)
+  theme.setFont(11)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf("Todas las probabilidades salen de config.lua y el panel del Nido muestra las tasas efectivas del motor. Las barras de garantía son contadores reales: te dicen cuántos huevos faltan para el próximo resultado asegurado. El Registro guarda fecha, rareza, genes, mutación, semilla y tiradas de cada apertura. No hay falsos “casi”, ni urgencia artificial, ni compras.",
+    x + 28, y + 234, 784, "left")
+
+  theme.setFont(13)
+  theme.setColor(theme.colors.amber, 1)
+  love.graphics.print("Atajos", x + 28, y + 330)
+  theme.setFont(11)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf("1–7 cambian de pestaña · Esc cierra paneles · Espacio salta la animación de apertura · Rueda del ratón para desplazar listas.",
+    x + 28, y + 354, 784, "left")
+
+  theme.setFont(13)
+  theme.setColor(theme.colors.amber, 1)
+  love.graphics.print("Tu ritmo", x + 28, y + 432)
+  theme.setFont(11)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf("En Ajustes puedes activar el modo tranquilo, un recordatorio opcional cada 60 o 90 minutos y un tope diario de huevos. El juego sigue funcionando sin conexión y guarda el progreso hasta 8 horas de ausencia.",
+    x + 28, y + 456, 784, "left")
+
+  closeButton(app, x + 660, y + 540, 152, 36, "Entendido")
+end
+
+-- Probabilidades
+local function drawProbabilities(app, modal)
+  local game = app.game
+  local snap = hatch.snapshot(game)
+  local x, y = widgets.modalFrame(app, "Probabilidades exactas", "Estas son las tasas que usa el motor en este momento. Nada está duplicado en la interfaz.", 920, 620)
+  local colX = { x + 28, x + 200, x + 320, x + 450 }
+  theme.setFont(10)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Rareza", colX[1], y + 94)
+  love.graphics.print("Tasa base", colX[2], y + 94)
+  love.graphics.print("Tasa efectiva", colX[3], y + 94)
+  love.graphics.print("Garantía", colX[4], y + 94)
+  local rowY = y + 116
+  for _, rarity in ipairs(config.rarityOrder) do
+    theme.setFont(11)
+    theme.setColor(theme.rarityColor(rarity), 1)
+    love.graphics.print(theme.rarityName(rarity), colX[1], rowY)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.print(theme.fmtPct(snap.base[rarity], 2), colX[2], rowY)
+    love.graphics.print(theme.fmtPct(snap.effective[rarity], 2), colX[3], rowY)
+    theme.setFont(9)
+    theme.setColor(theme.colors.muted, 1)
+    if rarity == "rare" then
+      love.graphics.print("Raro+ en " .. snap.pity.rareIn .. " huevos", colX[4], rowY + 2)
+    elseif rarity == "legendary" then
+      love.graphics.print("En " .. snap.pity.legendaryIn .. " · suave desde " .. config.rates.pity.legendarySoftStart, colX[4], rowY + 2)
+    end
+    rowY = rowY + 24
+  end
+
+  theme.setFont(10)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("La tasa efectiva incluye la mejora de suerte. La garantía sustituye la tirada cuando el contador llega al umbral; el resultado forzado puede ser aún mejor.", x + 28, y + 244, 850, "left")
+
+  theme.setFont(11)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print("Contadores de garantía", x + 28, y + 278)
+  local bars = {
+    { "Raro o superior", snap.pity.rare, config.rates.pity.rareAt, theme.colors.blue, snap.pity.rareIn },
+    { "Legendario", snap.pity.legendary, config.rates.pity.legendaryAt, theme.colors.amber, snap.pity.legendaryIn },
+    { "Mutación", snap.pity.mutation, config.rates.pity.mutationAt, theme.colors.essence, snap.pity.mutationIn },
+  }
+  local barY = y + 300
+  for _, bar in ipairs(bars) do
+    theme.setFont(10)
+    theme.setColor(theme.colors.textDim, 1)
+    love.graphics.print(bar[1], x + 28, barY)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Próximo garantizado en " .. bar[5] .. " huevo" .. (bar[5] == 1 and "" or "s"), x + 180, barY)
+    widgets.progressBar(x + 390, barY + 1, 400, 8, bar[2] / math.max(1, bar[3] - 1), bar[4])
+    theme.setFont(9)
+    love.graphics.print(bar[2] .. " / " .. (bar[3] - 1), x + 800, barY)
+    barY = barY + 24
+  end
+
+  theme.setFont(11)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print("Mutaciones", x + 28, y + 390)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Probabilidad total: " .. theme.fmtPct(snap.mutationChance, 2)
+    .. (snap.pity.mutationGuaranteed and " · garantizada en el próximo huevo" or ""), x + 150, y + 392)
+  local mutY = y + 414
+  for _, entry in ipairs(snap.mutations) do
+    theme.setFont(10)
+    theme.setColor(theme.colors.purple, 1)
+    love.graphics.print(entry.name, x + 28, mutY)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.print(theme.fmtPct(entry.chance, 2), x + 200, mutY)
+    theme.setFont(9)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print(entry.desc .. "  ·  x" .. theme.fmt(entry.production, 2) .. " de ámbar", x + 290, mutY + 1)
+    mutY = mutY + 22
+  end
+
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Semilla " .. game.seed .. " · " .. game.rng.count .. " tiradas · Las garantías no se reinician con el prestigio.", x + 28, y + 548, 700, "left")
+  widgets.button(app, x + 540, y + 548, 160, 34, "Abrir registro", {
+    style = "ghost",
+    onClick = function()
+      app:closeModal()
+      app:goto("log")
+    end,
+  })
+  closeButton(app, x + 720, y + 548, 160, 34)
+end
+
+-- Liberar
+local function drawRelease(app, modal)
+  local dino = stateModule.findDino(app.game, modal.dinoId)
+  if not dino then
+    app:closeModal()
+    return
+  end
+  local x, y = widgets.modalFrame(app, "Liberar ejemplar", "Esta acción no se puede deshacer.", 620, 390, {
+    borderColor = theme.colors.red,
+  })
+  render.drawDino(dino, x + 120, y + 190, 1.0, {})
+  theme.setFont(19)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(config.species[dino.species].name, x + 244, y + 104)
+  widgets.rarityChip(x + 244, y + 134, dino.rarity)
+  if dino.mutation then
+    widgets.chip(x + 244 + 100, y + 134, config.mutations[dino.mutation].name, theme.colors.purple)
+  end
+  theme.setFont(11)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf(geneSummary(dino.genes), x + 244, y + 170, 330, "left")
+  theme.setFont(12)
+  theme.setColor(theme.colors.essence, 1)
+  local essence = config.rarity[dino.rarity].essence
+  love.graphics.print("Recibirás " .. essence .. " de esencia.", x + 244, y + 206)
+  theme.setFont(10)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("El ejemplar desaparece del criadero. No afecta al Dinodex ya descubierto.", x + 244, y + 230, 330, "left")
+
+  widgets.button(app, x + 330, y + 320, 120, 38, "Cancelar", {
+    style = "secondary",
+    onClick = function()
+      app:closeModal()
+    end,
+  })
+  widgets.button(app, x + 462, y + 320, 130, 38, "Liberar", {
+    style = "danger",
+    onClick = function()
+      local ok, value = stateModule.releaseDino(app.game, dino.id)
+      if ok then
+        app.selectedDino = nil
+        app:toast("Liberado. +" .. value .. " esencia.", theme.colors.essence)
+        app:closeModal()
+      else
+        app:toast(value or "No se pudo liberar.", theme.colors.red)
+      end
+    end,
+  })
+end
+
+-- Apertura de huevo
+local function drawRevealResult(app, modal, reveal, x, y)
+  local elapsed = love.timer.getTime() - (modal.revealStart or 0)
+  local duration = config.time.revealDuration
+  local show = modal.skipped or app.game.settings.calm or elapsed >= duration
+  if not show then
+    theme.setFont(18)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.printf("Abriendo huevo", x + 40, y + 84, 640, "center")
+    render.egg(x + 380, y + 250, 2.0, {
+      wobble = math.sin(elapsed * 18) * 0.08 * (1 - elapsed / duration),
+    })
+    if elapsed > 0.45 then
+      theme.setColor(theme.colors.dark or theme.colors.bg, 0.8)
+      love.graphics.setLineWidth(2)
+      love.graphics.line(x + 360, y + 222, x + 370, y + 238, x + 362, y + 250)
+    end
+    theme.setFont(11)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf("El resultado se mostrará tal cual. Nada de destellos que sugieran rareza falsa.",
+      x + 120, y + 440, 600, "center")
+    theme.setFont(10)
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.printf("Clic para saltar", x + 120, y + 480, 600, "center")
+    return
+  end
+
+  if reveal.pendingSpecies then
+    theme.setFont(13)
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.printf("Legendario: elige una de las dos especies", x + 40, y + 96, 640, "center")
+    local cardW = 280
+    local cardH = 270
+    local startX = x + 70
+    for i, species in ipairs(reveal.pendingSpecies) do
+      local cx = startX + (i - 1) * (cardW + 30)
+      local cy = y + 140
+      theme.panel(cx, cy, cardW, cardH, {
+        color = theme.colors.panel2,
+        borderColor = theme.colors.amber,
+      })
+      local sample = {
+        id = 1,
+        species = species,
+        genes = reveal.genes,
+        mutation = reveal.mutation,
+      }
+      render.drawDino(sample, cx + cardW / 2, cy + 105, 1.05, {})
+      theme.setFont(16)
+      theme.setColor(theme.colors.text, 1)
+      love.graphics.printf(config.species[species].name, cx, cy + 170, cardW, "center")
+      theme.setFont(9)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.printf(config.species[species].desc, cx + 20, cy + 192, cardW - 40, "center")
+      widgets.button(app, cx + 60, cy + 226, cardW - 120, 30, "Elegir", {
+        style = "primary",
+        onClick = function()
+          local ok, dinoOrErr = stateModule.chooseSpecies(app.game, reveal.id, species)
+          if ok then
+            app:toast("Has elegido " .. config.species[species].name .. ".", theme.colors.amber)
+          else
+            app:toast(dinoOrErr or "No se pudo elegir.", theme.colors.red)
+          end
+        end,
+      })
+    end
+    return
+  end
+
+  local dino = reveal.dinoId and stateModule.findDino(app.game, reveal.dinoId) or nil
+  if dino then
+    render.drawDino(dino, x + 380, y + 255, 1.65, {})
+  else
+    render.drawDino({
+      id = reveal.dinoId or 1,
+      species = reveal.species,
+      genes = reveal.genes,
+      mutation = reveal.mutation,
+    }, x + 380, y + 255, 1.65, {})
+  end
+  theme.setFont(10)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Huevo abierto", x + 40, y + 78, 640, "center")
+  theme.setFont(24)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.printf(config.species[reveal.species].name, x + 40, y + 96, 640, "center")
+
+  local rarityColor = theme.rarityColor(reveal.rarity)
+  local rarityWidth = widgets.chipWidth(theme.rarityName(reveal.rarity), 11)
+  local mutationWidth = reveal.mutation and widgets.chipWidth(config.mutations[reveal.mutation].name, 11) or 0
+  local totalWidth = rarityWidth + (reveal.mutation and (mutationWidth + 8) or 0)
+  local chipX = x + 380 - totalWidth / 2
+  widgets.chip(chipX, y + 388, theme.rarityName(reveal.rarity), rarityColor, { font = 11 })
+  if reveal.mutation then
+    widgets.chip(chipX + rarityWidth + 8, y + 388, config.mutations[reveal.mutation].name, theme.colors.purple, { font = 11 })
+  end
+
+  theme.setFont(11)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf(geneSummary(reveal.genes), x + 40, y + 424, 640, "center")
+  local guarantee = guaranteesText(reveal.guaranteed)
+  if guarantee then
+    theme.setFont(10)
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.printf(guarantee, x + 40, y + 444, 640, "center")
+  end
+  if reveal.newDex then
+    theme.setFont(10)
+    theme.setColor(theme.colors.green, 1)
+    love.graphics.printf("Nuevo en el Dinodex", x + 40, y + 462, 640, "center")
+  end
+  if reveal.milestone then
+    theme.setFont(10)
+    theme.setColor(theme.colors.purple, 1)
+    local milestonePct = config.dinodex.milestoneFractions[reveal.milestone] * 100
+    love.graphics.printf("Hito del Dinodex " .. theme.fmt(milestonePct, 0) .. " % alcanzado: +"
+      .. theme.fmt(config.dinodex.milestoneBonus * 100, 0) .. " % de producción.",
+      x + 40, y + 478, 640, "center")
+  end
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Semilla " .. app.game.seed .. " · tiradas " .. tostring(reveal.rollStart) .. "–" .. tostring(reveal.rollEnd),
+    x + 40, y + 500, 640, "center")
+  widgets.button(app, x + 250, y + 522, 340, 40, "Continuar", {
+    style = "primary",
+    onClick = function()
+      stateModule.dismissReveal(app.game, reveal.id)
+      app:closeModal()
+    end,
+  })
+end
+
+local function drawReveal(app, modal)
+  local reveal = modal.reveal
+  local current = false
+  for _, candidate in ipairs(app.game.pendingReveals) do
+    if candidate.id == reveal.id then
+      current = true
+      break
+    end
+  end
+  if not current then
+    app:closeModal()
+    return
+  end
+  love.graphics.setColor(0, 0, 0, 0.78)
+  love.graphics.rectangle("fill", 0, 0, 1280, 720)
+  local x = (1280 - 760) / 2
+  local y = (720 - 590) / 2
+  theme.panel(x, y, 760, 590, {
+    color = theme.colors.panel,
+    radius = 18,
+    borderColor = theme.rarityColor(reveal.rarity),
+  })
+
+  local elapsed = love.timer.getTime() - (modal.revealStart or 0)
+  if not modal.skipped and not app.game.settings.calm and elapsed < config.time.revealDuration then
+    if app.click then
+      modal.skipped = true
+      app.click = nil
+    end
+  end
+
+  drawRevealResult(app, modal, reveal, x, y)
+end
+
+-- Offline
+local function drawOffline(app, modal)
+  local summary = modal.summary or {}
+  local x, y = widgets.modalFrame(app, "Mientras estabas fuera",
+    "El progreso offline se calcula con os.time() y tiene un tope de 8 horas.", 680, 440)
+  theme.setFont(11)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Tiempo real ausente", x + 40, y + 102)
+  love.graphics.print("Tiempo acreditado", x + 40, y + 126)
+  theme.setFont(15)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(theme.fmtTime(summary.elapsed or 0), x + 240, y + 99)
+  love.graphics.print(theme.fmtTime(summary.credited or 0), x + 240, y + 123)
+
+  theme.setFont(11)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Ámbar generado", x + 40, y + 178)
+  theme.setFont(26)
+  theme.setColor(theme.colors.amber, 1)
+  love.graphics.print("+" .. theme.fmtInt(summary.amber or 0), x + 240, y + 168)
+
+  theme.setFont(11)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Huevos nuevos", x + 40, y + 232)
+  love.graphics.print("Huevos abiertos", x + 40, y + 256)
+  love.graphics.print("Cruces terminados", x + 40, y + 280)
+  theme.setColor(theme.colors.text, 1)
+  theme.setFont(13)
+  love.graphics.print(summary.eggs or 0, x + 240, y + 230)
+  love.graphics.print(summary.hatches or 0, x + 240, y + 254)
+  love.graphics.print(summary.crosses or 0, x + 240, y + 278)
+
+  if summary.capped then
+    theme.setFont(10)
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.printf("La ausencia superaba 8 horas. El ámbar y los huevos offline se limitaron a ese tope; las incubadoras ya iniciadas terminaron igualmente.",
+      x + 40, y + 318, 600, "left")
+  else
+    theme.setFont(10)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf("Los huevos pendientes de abrir aparecerán a continuación.",
+      x + 40, y + 318, 600, "left")
+  end
+  widgets.button(app, x + 480, y + 368, 160, 38, "Continuar", {
+    style = "primary",
+    onClick = function()
+      app:closeModal()
+    end,
+  })
+end
+
+-- Dinodex por especie
+local function dexFilterOptions()
+  local options = { { value = "todas", label = "Todas" }, { value = "ninguna", label = "Sin mutación" } }
+  for _, key in ipairs(config.mutationOrder) do
+    options[#options + 1] = { value = key, label = config.mutations[key].name }
+  end
+  return options
+end
+
+local function drawDex(app, modal)
+  local species = modal.species
+  local x, y = widgets.modalFrame(app, config.species[species].name,
+    "Combinaciones de patrón, color, cresta y mutación descubiertas.", 1000, 620)
+  widgets.cycle(app, x + 28, y + 82, 250, 50, "Filtrar por mutación", app.dexMutation or "todas", dexFilterOptions(), function(value)
+    app.dexMutation = value
+  end)
+
+  local mutationRank = { ninguna = 0 }
+  for index, key in ipairs(config.mutationOrder) do
+    mutationRank[key] = index
+  end
+  local patternRank = {}
+  for index, key in ipairs(config.patternOrder) do
+    patternRank[key] = index
+  end
+  local colorRank = {}
+  for index, key in ipairs(config.colorOrder) do
+    colorRank[key] = index
+  end
+  local crestRank = {}
+  for index, key in ipairs(config.crestOrder) do
+    crestRank[key] = index
+  end
+
+  local list = {}
+  for _, variant in pairs(app.game.dinodex.variants) do
+    if variant.species == species then
+      local mutation = variant.mutation or "ninguna"
+      if app.dexMutation == "todas" or app.dexMutation == mutation then
+        list[#list + 1] = variant
+      end
+    end
+  end
+  table.sort(list, function(a, b)
+    local ma = mutationRank[a.mutation or "ninguna"] or 0
+    local mb = mutationRank[b.mutation or "ninguna"] or 0
+    if ma ~= mb then
+      return ma < mb
+    end
+    local pa = patternRank[a.pattern] or 0
+    local pb = patternRank[b.pattern] or 0
+    if pa ~= pb then
+      return pa < pb
+    end
+    local ca = colorRank[a.primaryColor] or 0
+    local cb = colorRank[b.primaryColor] or 0
+    if ca ~= cb then
+      return ca < cb
+    end
+    return (crestRank[a.crest] or 0) < (crestRank[b.crest] or 0)
+  end)
+
+  theme.setFont(10)
+  theme.setColor(theme.colors.textDim, 1)
+  local totalPerSpecies = #config.patternOrder * #config.colorOrder * #config.crestOrder
+    * (#config.mutationOrder + 1)
+  love.graphics.printf(#list .. " variantes mostradas · " .. (app.game.dinodex.bySpecies[species] or 0)
+    .. " descubiertas de " .. totalPerSpecies,
+    x + 300, y + 96, 500, "left")
+
+  local rowH = 64
+  local contentH = #list * rowH
+  widgets.scroll(app, "dex_list", x + 28, y + 144, 944, 400, contentH, function(offset)
+    if #list == 0 then
+      widgets.emptyState(x + 28, y + 170, 944, 140, "Sin variantes con ese filtro",
+        "Sigue incubando y cruzando ejemplares para descubrir combinaciones.")
+      return
+    end
+    for index, variant in ipairs(list) do
+      local ry = y + 144 + (index - 1) * rowH - offset
+      if ry + rowH >= y + 144 and ry <= y + 544 then
+        if index % 2 == 0 then
+          theme.setColor(theme.colors.panel2, 0.5)
+          love.graphics.rectangle("fill", x + 28, ry, 944, rowH)
+        end
+        local sample = {
+          id = variant.firstDinoId or index,
+          species = variant.species,
+          genes = {
+            pattern = variant.pattern,
+            primaryColor = variant.primaryColor,
+            secondaryColor = variant.secondaryColor,
+            crest = variant.crest,
+          },
+          mutation = variant.mutation,
+        }
+        render.drawDino(sample, x + 70, ry + 32, 0.34, {})
+        theme.setFont(12)
+        theme.setColor(theme.colors.text, 1)
+        love.graphics.print(config.patterns[variant.pattern].name .. " · "
+          .. config.colors[variant.primaryColor].name .. " · "
+          .. config.crests[variant.crest].name, x + 116, ry + 12)
+        theme.setFont(10)
+        theme.setColor(variant.mutation and theme.colors.purple or theme.colors.muted, 1)
+        love.graphics.print(variant.mutation and config.mutations[variant.mutation].name or "Sin mutación", x + 116, ry + 34)
+        theme.setFont(9)
+        theme.setColor(theme.colors.muted, 1)
+        love.graphics.printf("Descubierto " .. theme.fmtClock(variant.firstAt or 0) .. " · secundario "
+          .. (config.secondaryColors[variant.secondaryColor] and config.secondaryColors[variant.secondaryColor].name or "?"),
+          x + 420, ry + 22, 500, "left")
+      end
+    end
+  end)
+  closeButton(app, x + 792, y + 560, 180, 36)
+end
+
+-- Combinaciones de un cruce
+local function drawCombos(app, modal)
+  local x, y = widgets.modalFrame(app, "Todas las combinaciones", "Distribución exacta de los genes visibles del cruce. La mutación se sortea aparte.", 900, 600)
+  local combos = modal.combos or {}
+  local rowH = 26
+  local contentH = #combos * rowH
+  widgets.scroll(app, "combos_list", x + 28, y + 100, 844, 420, contentH, function(offset)
+    for index, combo in ipairs(combos) do
+      local ry = y + 100 + (index - 1) * rowH - offset
+      if ry + rowH >= y + 100 and ry <= y + 520 then
+        if index % 2 == 0 then
+          theme.setColor(theme.colors.panel2, 0.5)
+          love.graphics.rectangle("fill", x + 28, ry, 844, rowH)
+        end
+        theme.setFont(10)
+        theme.setColor(theme.colors.amber, 1)
+        love.graphics.print(theme.fmtPct(combo.probability, 2), x + 40, ry + 7)
+        theme.setColor(theme.colors.text, 1)
+        love.graphics.print(config.patterns[combo.phenotype.pattern].name .. " · "
+          .. config.colors[combo.phenotype.primaryColor].name .. " · "
+          .. config.secondaryColors[combo.phenotype.secondaryColor].name .. " · "
+          .. config.crests[combo.phenotype.crest].name, x + 120, ry + 7)
+      end
+    end
+  end)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf(#combos .. " combinaciones visibles · suma 100 %", x + 28, y + 532, 700, "left")
+  closeButton(app, x + 692, y + 540, 180, 36)
+end
+
+-- Prestigio
+local function drawPrestige(app, modal)
+  local game = app.game
+  local can, reason = prestige.canPrestige(game)
+  if not can then
+    app:closeModal()
+    app:toast(reason or "No puedes migrar todavía.", theme.colors.red)
+    return
+  end
+  local gain, fromDinos, fromDex = prestige.gain(game)
+  local x, y = widgets.modalFrame(app, "Gran Migración",
+    "Elige hasta " .. config.prestige.maxFounders .. " fundadores. El resto de la colonia se reinicia; el Dinodex, el pity y el registro se conservan.", 1000, 640, {
+      borderColor = theme.colors.amber,
+    })
+  theme.setFont(10)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Ganancia de legado", x + 28, y + 84)
+  theme.setFont(22)
+  theme.setColor(theme.colors.purple, 1)
+  love.graphics.print("+" .. theme.fmtInt(gain), x + 28, y + 102)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Por ejemplares: " .. fromDinos .. " · por Dinodex: " .. fromDex, x + 28, y + 130)
+  theme.setFont(10)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf("Se conservan también: semilla, ajustes y multiplicador de legado. Se reinician ámbar, esencia, mejoras, huevos e incubadoras.",
+    x + 28, y + 154, 300, "left")
+  theme.setFont(9)
+  theme.setColor(theme.colors.red, 1)
+  love.graphics.printf("Esta acción no se puede deshacer.", x + 28, y + 222, 300, "left")
+
+  theme.setFont(13)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print("Fundadores elegidos: " .. (function()
+    local count = 0
+    for _ in pairs(app.prestigeFounders) do
+      count = count + 1
+    end
+    return count
+  end)(), x + 28, y + 260)
+
+  local list = {}
+  for _, dino in ipairs(game.dinos) do
+    list[#list + 1] = dino
+  end
+  table.sort(list, function(a, b)
+    local ia, ib = 1, 1
+    for i, key in ipairs(config.rarityOrder) do
+      if key == a.rarity then
+        ia = i
+      end
+      if key == b.rarity then
+        ib = i
+      end
+    end
+    if ia ~= ib then
+      return ia > ib
+    end
+    return a.id > b.id
+  end)
+
+  theme.setFont(12)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.print("Criadero actual", x + 356, y + 84)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Haz clic para marcar o desmarcar un fundador.", x + 356, y + 104)
+  local rowH = 44
+  local contentH = #list * rowH
+  widgets.scroll(app, "prestige_list", x + 356, y + 128, 616, 396, contentH, function(offset)
+    if #list == 0 then
+      widgets.emptyState(x + 356, y + 150, 616, 160, "No hay ejemplares", "La migración conservará el Dinodex.")
+      return
+    end
+    for index, dino in ipairs(list) do
+      local ry = y + 128 + (index - 1) * rowH - offset
+      if ry + rowH >= y + 128 and ry <= y + 524 then
+        local selected = app.prestigeFounders[dino.id]
+        local hover = widgets.hover(app, x + 356, ry + 2, 616, rowH - 4)
+        if hover then
+          app.mouse.hand = true
+        end
+        if widgets.click(app, x + 356, ry + 2, 616, rowH - 4) then
+          if selected then
+            app.prestigeFounders[dino.id] = nil
+          else
+            local count = 0
+            for _ in pairs(app.prestigeFounders) do
+              count = count + 1
+            end
+            if count >= config.prestige.maxFounders then
+              app:toast("Solo puedes conservar " .. config.prestige.maxFounders .. " fundadores.", theme.colors.amber)
+            else
+              app.prestigeFounders[dino.id] = true
+            end
+          end
+        end
+        theme.panel(x + 356, ry + 2, 616, rowH - 4, {
+          color = selected and theme.colors.panel3 or (hover and theme.colors.panel2 or theme.colors.panel),
+          borderColor = selected and theme.colors.amber or theme.colors.borderSoft,
+        })
+        theme.setColor(selected and theme.colors.amber or theme.colors.border, 1)
+        love.graphics.rectangle("line", x + 370, ry + 13, 16, 16, 3, 3)
+        if selected then
+          theme.setColor(theme.colors.amber, 1)
+          love.graphics.rectangle("fill", x + 374, ry + 17, 8, 8, 2, 2)
+        end
+        render.drawDino(dino, x + 418, ry + 22, 0.24, {})
+        theme.setFont(11)
+        theme.setColor(theme.colors.text, 1)
+        love.graphics.print(config.species[dino.species].name, x + 446, ry + 9)
+        widgets.rarityChip(x + 590, ry + 8, dino.rarity, true)
+        theme.setFont(9)
+        theme.setColor(theme.colors.muted, 1)
+        love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, game)) .. "/s", x + 446, ry + 25)
+      end
+    end
+  end)
+
+  widgets.button(app, x + 356, y + 560, 290, 44, "Cancelar", {
+    style = "secondary",
+    onClick = function()
+      app:closeModal()
+    end,
+  })
+  widgets.button(app, x + 662, y + 560, 310, 44, "Migrar y reiniciar", {
+    style = "danger",
+    onClick = function()
+      local founders = {}
+      for id in pairs(app.prestigeFounders) do
+        founders[#founders + 1] = id
+      end
+      table.sort(founders)
+      local ok, value = stateModule.prestigeNow(game, founders, app.now)
+      if ok then
+        app.prestigeFounders = {}
+        app.selectedDino = nil
+        app.crossSelect.a = nil
+        app.crossSelect.b = nil
+        app.scroll.breeding_grid = 0
+        app:toast("Gran Migración completada. +" .. value .. " de legado permanente.", theme.colors.purple)
+        app:closeModal()
+      else
+        app:toast(value or "No se pudo migrar.", theme.colors.red)
+      end
+    end,
+  })
+end
+
+function modals.draw(app, modal)
+  local handlers = {
+    help = drawHelp,
+    probabilities = drawProbabilities,
+    release = drawRelease,
+    reveal = drawReveal,
+    offline = drawOffline,
+    dex = drawDex,
+    combos = drawCombos,
+    prestige = drawPrestige,
+  }
+  local handler = handlers[modal.kind]
+  if handler then
+    handler(app, modal)
+  else
+    app:closeModal()
+  end
+end
+
+function modals.escape(app)
+  if not app.modal then
+    return
+  end
+  if app.modal.kind == "reveal" then
+    local reveal = app.modal.reveal
+    if reveal and reveal.pendingSpecies then
+      app:toast("Elige una especie para continuar.", theme.colors.amber)
+      return
+    end
+    app.modal.skipped = true
+    app.modal.revealStart = love.timer.getTime() - 2
+    return
+  end
+  app:closeModal()
+end
+
+return modals
