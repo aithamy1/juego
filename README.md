@@ -70,6 +70,10 @@ tests/                   runner y suites con luajit
 
 La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, mejoras rápidas y prestigio a la derecha, fuente pixel-art y paneles con bisel. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta nueve dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
 
+## Dinosaurios
+
+Los dinosaurios se dibujan por código y se cachean como sprites de píxel con dos resoluciones: una nítida para tarjetas y pradera y otra con más detalle para la ficha y la apertura. Cada especie tiene silueta propia, sombreado, textura de piel, ojos pequeños con pupila, pico, garras y sus rasgos distintivos: gola y cuernos del Triceratops, plumas y garra del Velociraptor, cresta tubular del Parasaurolophus, alas del Pteranodon, placas del Stegosaurus y coraza y maza del Ankylosaurus. Los genes de patrón, colores, cresta y mutación se aplican sobre el sprite.
+
 ## Cómo se juega
 
 1. El nido genera huevos automáticamente. Haz clic en un huevo para incubarlo.

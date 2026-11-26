@@ -110,7 +110,7 @@ local function drawCard(app, dino, x, y, w, h, now)
     shadowSize = 2,
     borderWidth = selected and 2 or 1,
   })
-  render.drawDino(dino, x + w / 2, y + 42, 0.34, {})
+  render.drawDino(dino, x + w / 2, y + 42, 0.38, {})
   theme.setFont(9)
   theme.setColor(theme.colors.text, 1)
   love.graphics.printf(config.species[dino.species].name, x + 4, y + 76, w - 8, "center")
@@ -198,7 +198,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
   end
 
   local adult = now >= (dino.adultAt or 0)
-  render.drawDino(dino, x + w / 2, y + 80, 0.82, {})
+  render.drawDino(dino, x + w / 2, y + 80, 0.92, {})
   theme.setFont(15)
   theme.setColor(theme.colors.text, 1)
   love.graphics.printf(config.species[dino.species].name, x + 10, y + 134, w - 20, "center")
