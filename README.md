@@ -72,7 +72,7 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 
 ## Dinosaurios
 
-Los dinosaurios se dibujan por código y se cachean como sprites de píxel con dos resoluciones: una nítida para tarjetas y pradera y otra con más detalle para la ficha y la apertura. Cada especie tiene silueta propia, sombreado, textura de piel, ojos pequeños con pupila, pico, garras y sus rasgos distintivos: gola y cuernos del Triceratops, plumas y garra del Velociraptor, cresta tubular del Parasaurolophus, alas del Pteranodon, placas del Stegosaurus y coraza y maza del Ankylosaurus. Los genes de patrón, colores, cresta y mutación se aplican sobre el sprite.
+Los dinosaurios son sprites de píxel de rejilla 32×24 cacheados: contorno oscuro de un píxel, tres tonos de cuerpo y formas planas, como en las referencias. Cada especie tiene silueta propia, ojo negro, pico, garras y sus rasgos distintivos: gola y cuernos del Triceratops, plumas y garra del Velociraptor, cresta tubular del Parasaurolophus, alas del Pteranodon, placas del Stegosaurus y coraza y maza del Ankylosaurus. Los genes de patrón, colores, cresta y mutación se aplican sobre la rejilla; la pradera los mueve y los gira.
 
 ## Cómo se juega
 
