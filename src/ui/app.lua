@@ -1,7 +1,8 @@
--- Aplicación de interfaz: cabecera, pestañas, escenas, modales y avisos.
+-- Aplicación de interfaz: marco de escritorio, catálogo, mejoras y escenas.
 local config = require("src.game.config")
 local stateModule = require("src.game.state")
 local economy = require("src.game.economy")
+local prestige = require("src.game.prestige")
 local theme = require("src.ui.theme")
 local widgets = require("src.ui.widgets")
 local render = require("src.render.dino")
@@ -21,13 +22,45 @@ local scenes = {
 local modals = require("src.ui.modals")
 
 local tabs = {
-  { key = "nest", label = "Nido", hotkey = "1" },
-  { key = "breeding", label = "Criadero", hotkey = "2" },
-  { key = "cross", label = "Cruces", hotkey = "3" },
-  { key = "upgrades", label = "Mejoras", hotkey = "4" },
-  { key = "dinodex", label = "Dinodex", hotkey = "5" },
-  { key = "log", label = "Registro", hotkey = "6" },
-  { key = "settings", label = "Ajustes", hotkey = "7" },
+  { key = "nest", label = "Nido", hotkey = "1", icon = "nest" },
+  { key = "breeding", label = "Criadero", hotkey = "2", icon = "breeding" },
+  { key = "cross", label = "Cruces", hotkey = "3", icon = "cross" },
+  { key = "upgrades", label = "Mejoras", hotkey = "4", icon = "upgrade" },
+  { key = "dinodex", label = "Dinodex", hotkey = "5", icon = "dex" },
+  { key = "log", label = "Registro", hotkey = "6", icon = "log" },
+  { key = "settings", label = "Ajustes", hotkey = "7", icon = "settings" },
+}
+
+local sceneMeta = {
+  nest = { title = "Nido", subtitle = "Huevos, incubadoras y garantías del motor.", icon = "nest" },
+  breeding = { title = "Criadero", subtitle = "Tus ejemplares, sus genes y su producción.", icon = "breeding" },
+  cross = { title = "Cruces", subtitle = "Herencia mendeliana, simulador y resultados.", icon = "cross" },
+  upgrades = { title = "Mejoras", subtitle = "Invierte ámbar y esencia en la colonia.", icon = "upgrade" },
+  dinodex = { title = "Dinodex", subtitle = "Cada patrón, color, cresta y mutación descubiertos.", icon = "dex" },
+  log = { title = "Registro", subtitle = "Cada huevo queda anotado con su semilla y sus tiradas.", icon = "log" },
+  settings = { title = "Ajustes", subtitle = "Tu ritmo, accesibilidad y la Gran Migración.", icon = "settings" },
+}
+
+local quickUpgrades = { "generator", "incubators", "incubation", "production" }
+
+app.layout = {
+  headerH = 64,
+  leftX = 12,
+  leftY = 76,
+  leftW = 228,
+  leftH = 624,
+  boardX = 252,
+  boardY = 76,
+  boardW = 776,
+  boardH = 624,
+  rightX = 1048,
+  rightY = 76,
+  rightW = 220,
+  rightH = 624,
+  contentX = 276,
+  contentY = 154,
+  contentW = 728,
+  contentH = 522,
 }
 
 function app.new(game)
@@ -53,6 +86,7 @@ function app.new(game)
   }
   self.logFilter = "todos"
   self.dexSpecies = nil
+  self.dexMutation = "todas"
   self.prestigeFounders = {}
   self.selectedDino = nil
   self.crossWasActive = false
@@ -143,71 +177,392 @@ function app:update(dt, now)
   end
 end
 
-function app:drawResource(x, y, w, currency, value, sub, tooltip)
-  local hover = widgets.hover(self, x, y, w, 42)
-  if hover then
-    self.tooltip = tooltip
-  end
-  theme.drawIcon(currency, x + 14, y + 20, 7)
-  theme.setFont(17)
-  theme.setColor(theme.colors.text, 1)
-  love.graphics.print(value, x + 30, y + 7)
-  theme.setFont(10)
-  theme.setColor(theme.colors.muted, 1)
-  love.graphics.print(sub, x + 30, y + 28)
-end
-
+-- Cabecera
 function app:drawHeader()
-  theme.setColor(theme.colors.bg2, 0.98)
-  love.graphics.rectangle("fill", 0, 0, 1280, 56)
-  theme.setColor(theme.colors.border, 0.7)
-  love.graphics.setLineWidth(1)
-  love.graphics.line(0, 56, 1280, 56)
-
-  render.egg(34, 27, 0.34, {})
-  theme.setFont(19)
-  theme.setColor(theme.colors.text, 1)
-  love.graphics.print("CRIADERO DE ÁMBAR", 58, 8)
-  theme.setFont(10)
-  theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("Cría, colecciona y migra", 59, 32)
-
   local game = self.game
-  local production = economy.totalProduction(game, self.now or os.time())
-  self.productionRate = production
-  self:drawResource(736, 6, 154, "amber", theme.fmtInt(game.amber),
-    "+" .. theme.fmtRate(production) .. "/s", "Ámbar: moneda principal. Lo producen los adultos.")
-  self:drawResource(898, 6, 146, "essence", theme.fmtInt(game.essence),
-    "Esencia", "Esencia: se obtiene al liberar ejemplares.")
-  self:drawResource(1052, 6, 200, "legacy", "x" .. theme.fmt(1 + config.prestige.legacyMultiplier * (game.prestige.totalLegacy or 0), 2),
-    "Legado permanente", "Multiplicador permanente de ámbar por la Gran Migración.")
-
-end
-
-function app:drawTabs()
-  theme.setColor(theme.colors.bg, 0.7)
-  love.graphics.rectangle("fill", 0, 57, 1280, 52)
-  local gap = 5
-  local width = 158
-  local total = #tabs * width + (#tabs - 1) * gap
-  local startX = (1280 - total) / 2
-  for i, tab in ipairs(tabs) do
-    local x = startX + (i - 1) * (width + gap)
-    local selected = self.scene == tab.key
-    widgets.button(self, x, 63, width, 39, tab.label, {
-      style = "tab",
-      selected = selected,
-      font = 14,
-      tooltip = "Atajo: " .. tab.hotkey,
-      onClick = function()
-        self:goto(tab.key)
-      end,
-    })
-    if selected then
-      theme.setColor(theme.colors.amber, 1)
-      love.graphics.rectangle("fill", x + 18, 100, width - 36, 2, 1, 1)
+  theme.setColor(theme.colors.bg2, 1)
+  love.graphics.rectangle("fill", 0, 0, 1280, 64)
+  theme.setColor(theme.colors.bgPattern, 0.35)
+  for x = 0, 1279, 16 do
+    if (x / 16) % 2 == 0 then
+      love.graphics.rectangle("fill", x, 0, 8, 64)
     end
   end
+  theme.setColor(theme.colors.goldDark, 1)
+  love.graphics.rectangle("fill", 0, 60, 1280, 4)
+
+  local production = economy.totalProduction(game, self.now or os.time())
+
+  -- Ámbar: tarjeta dorada principal
+  theme.panel(12, 8, 212, 46, {
+    color = theme.colors.gold,
+    borderColor = theme.colors.goldDark,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.iconAmber(30, 31, 11)
+  theme.setFont(20)
+  theme.setColor(theme.colors.ink, 1)
+  love.graphics.print(theme.fmtCompact(game.amber), 48, 10)
+  theme.setFont(8)
+  theme.setColor(theme.colors.ink, 0.75)
+  love.graphics.print("ÁMBAR", 49, 33)
+  theme.setColor(theme.colors.ink, 0.9)
+  love.graphics.printf("+" .. theme.fmtRate(production) .. "/s", 80, 34, 130, "right")
+
+  theme.panel(234, 8, 144, 46, {
+    color = theme.colors.panel2,
+    borderColor = theme.colors.teal,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.iconEssence(252, 31, 9)
+  theme.setFont(15)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(theme.fmtCompact(game.essence), 268, 15)
+  theme.setFont(8)
+  theme.setColor(theme.colors.teal, 1)
+  love.graphics.print("ESENCIA", 269, 35)
+
+  theme.panel(386, 8, 160, 46, {
+    color = theme.colors.panel2,
+    borderColor = theme.colors.purple,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.iconLegacy(404, 31, 8)
+  theme.setFont(15)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print("x" .. theme.fmt(1 + config.prestige.legacyMultiplier * (game.prestige.totalLegacy or 0), 2), 420, 15)
+  theme.setFont(8)
+  theme.setColor(theme.colors.purple, 1)
+  love.graphics.print("LEGADO", 421, 35)
+
+  theme.setFont(14, true)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("CRIADERO DE ÁMBAR", 556, 11)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("v" .. config.version, 557, 31)
+
+  local gearX, gearY = 1222, 10
+  local hover = widgets.hover(self, gearX, gearY, 44, 44)
+  if hover then
+    self.tooltip = "Ajustes y Gran Migración."
+    self.mouse.hand = true
+  end
+  if widgets.click(self, gearX, gearY, 44, 44) then
+    self:goto("settings")
+  end
+  theme.panel(gearX, gearY, 44, 44, {
+    color = hover and theme.colors.panel3 or theme.colors.panel2,
+    borderColor = theme.colors.border,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.drawGear(gearX + 22, gearY + 22, 12, theme.colors.textDim)
+end
+
+-- Navegación izquierda
+function app:navInfo(key)
+  local game = self.game
+  local now = self.now
+  if key == "nest" then
+    local capacity = economy.nestCapacity(game)
+    return {
+      title = "Nido",
+      sub = #game.eggs .. " / " .. capacity .. " huevos",
+      bar = #game.eggs / capacity,
+      barColor = theme.colors.amber,
+      icon = "nest",
+    }
+  elseif key == "breeding" then
+    local adults = 0
+    for _, dino in ipairs(game.dinos) do
+      if now >= (dino.adultAt or 0) then
+        adults = adults + 1
+      end
+    end
+    local total = math.max(1, #game.dinos)
+    return {
+      title = "Criadero",
+      sub = #game.dinos .. " ejemplares · " .. adults .. " adultos",
+      bar = adults / total,
+      barColor = theme.colors.green,
+      icon = "breeding",
+    }
+  elseif key == "cross" then
+    local sub = "Sin cruce"
+    local bar = 0
+    if game.cross then
+      sub = game.cross.finished and "Huevo esperando espacio" or ("En curso · " .. theme.fmtTime(math.max(0, game.cross.finishAt - now)))
+      bar = math.min(1, (now - game.cross.startedAt) / math.max(1, game.cross.finishAt - game.cross.startedAt))
+    end
+    return {
+      title = "Cruces",
+      sub = sub,
+      bar = bar,
+      barColor = theme.colors.essence,
+      icon = "cross",
+    }
+  elseif key == "upgrades" then
+    local levels = 0
+    local maxLevels = 0
+    for _, upgradeKey in ipairs(config.upgradesOrder) do
+      levels = levels + (game.upgrades[upgradeKey] or 0)
+      maxLevels = maxLevels + config.upgrades[upgradeKey].max
+    end
+    return {
+      title = "Mejoras",
+      sub = "Nivel total " .. levels,
+      bar = levels / maxLevels,
+      barColor = theme.colors.gold,
+      icon = "upgrade",
+    }
+  elseif key == "dinodex" then
+    local total = 1728
+    return {
+      title = "Dinodex",
+      sub = game.dinodex.total .. " / " .. total .. " · " .. theme.fmtPct(game.dinodex.total / total, 1),
+      bar = game.dinodex.total / total,
+      barColor = theme.colors.purple,
+      icon = "dex",
+    }
+  elseif key == "log" then
+    return {
+      title = "Registro",
+      sub = theme.fmtInt(game.stats.hatched) .. " huevos abiertos",
+      bar = math.min(1, game.stats.hatched / 100),
+      barColor = theme.colors.blue,
+      icon = "log",
+    }
+  end
+  return {
+    title = "Ajustes",
+    sub = (game.settings.calm and "Modo tranquilo" or "Animaciones") .. " · Tope "
+      .. (game.settings.dailyCap == 0 and "sin límite" or tostring(game.settings.dailyCap)),
+    bar = 0,
+    barColor = theme.colors.muted,
+    icon = "settings",
+  }
+end
+
+function app:drawLeftSidebar()
+  local x = self.layout.leftX
+  theme.goldBar(x, self.layout.leftY, self.layout.leftW, 30, "CATÁLOGO", { font = 14, icon = "dex" })
+  local y = self.layout.leftY + 38
+  for index, tab in ipairs(tabs) do
+    local info = self:navInfo(tab.key)
+    local active = self.scene == tab.key
+    local hover = widgets.hover(self, x, y, self.layout.leftW, 64)
+    if hover then
+      self.mouse.hand = true
+      self.tooltip = "Atajo: " .. tab.hotkey
+    end
+    if widgets.click(self, x, y, self.layout.leftW, 64) then
+      self:goto(tab.key)
+    end
+    theme.panel(x, y, self.layout.leftW, 64, {
+      color = active and theme.colors.panel3 or (hover and theme.colors.panel2 or theme.colors.panel),
+      borderColor = active and theme.colors.gold or theme.colors.borderSoft,
+      shadowSize = 3,
+      borderWidth = active and 3 or 1,
+    })
+    theme.insetPanel(x + 7, y + 9, 34, 34, {
+      color = active and theme.colors.goldDark or theme.colors.bg,
+      borderColor = active and theme.colors.gold or theme.colors.borderSoft,
+    })
+    theme.drawNavIcon(info.icon, x + 24, y + 26, 12, active and theme.colors.goldLight or theme.colors.textDim)
+    theme.setFont(12)
+    theme.setColor(active and theme.colors.goldLight or theme.colors.text, 1)
+    love.graphics.print(info.title, x + 49, y + 8)
+    theme.setFont(9)
+    theme.setColor(active and theme.colors.textDim or theme.colors.muted, 1)
+    love.graphics.print(info.sub, x + 49, y + 27)
+    widgets.progressBar(x + 49, y + 45, 165, 5, info.bar or 0, info.barColor, {})
+    y = y + 68
+  end
+
+  local bottomY = 604
+  theme.panel(x, bottomY, self.layout.leftW, 92, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.goldDark,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.iconLegacy(x + 20, bottomY + 20, 7)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("LEGADO PERMANENTE", x + 36, bottomY + 10)
+  theme.setFont(15)
+  theme.setColor(theme.colors.purple, 1)
+  love.graphics.print("x" .. theme.fmt(prestige.multiplier(self.game), 2), x + 36, bottomY + 23)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Semilla " .. self.game.seed, x + 12, bottomY + 52)
+  love.graphics.print(theme.fmtInt(self.game.rng.count) .. " tiradas · v" .. config.version, x + 12, bottomY + 68)
+end
+
+-- Mejoras rápidas y prestigio a la derecha
+function app:drawRightSidebar()
+  local game = self.game
+  local x = self.layout.rightX
+  theme.tealBar(x, self.layout.rightY, self.layout.rightW, 30, "MEJORAS", { font = 14, icon = "upgrade" })
+
+  local y = self.layout.rightY + 38
+  for _, key in ipairs(quickUpgrades) do
+    local def = config.upgrades[key]
+    local level = game.upgrades[key] or 0
+    local maxed = level >= def.max
+    local cost = economy.upgradeCost(key, level)
+    local canBuy, reason = stateModule.canBuyUpgrade(game, key)
+    local hover = widgets.hover(self, x, y, self.layout.rightW, 74)
+    if hover then
+      self.mouse.hand = true
+      self.tooltip = def.desc .. (maxed and " Nivel máximo." or (" Coste: " .. theme.fmtInt(cost) .. (def.currency == "amber" and " ámbar." or " esencia.")))
+    end
+    if widgets.click(self, x, y, self.layout.rightW, 74) and not maxed then
+      local ok, value = stateModule.buyUpgrade(game, key)
+      if ok then
+        self:toast(def.name .. " · nivel " .. game.upgrades[key] .. " por " .. theme.fmtInt(value), theme.colors.gold)
+      else
+        self:toast(value or "No se pudo comprar.", theme.colors.red)
+      end
+    end
+    theme.panel(x, y, self.layout.rightW, 74, {
+      color = hover and theme.colors.panel3 or theme.colors.panel2,
+      borderColor = maxed and theme.colors.green or theme.colors.borderSoft,
+      shadowSize = 3,
+      borderWidth = 2,
+    })
+    theme.insetPanel(x + 7, y + 8, 26, 26, {
+      color = theme.colors.bg,
+      borderColor = theme.colors.borderSoft,
+    })
+    theme.drawUpgradeIcon(key, x + 20, y + 21, 9, theme.colors.gold)
+    theme.setFont(11)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.print(def.name, x + 40, y + 7)
+    theme.setFont(9)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Nivel " .. level .. " / " .. def.max, x + 40, y + 23)
+    if maxed then
+      theme.setFont(9)
+      theme.setColor(theme.colors.green, 1)
+      love.graphics.print("MÁXIMO", x + 40, y + 39)
+    else
+      theme.drawIcon(def.currency, x + 46, y + 46, 4)
+      theme.setFont(10)
+      theme.setColor(canBuy and theme.colors.goldLight or theme.colors.muted, 1)
+      love.graphics.print(theme.fmtInt(cost), x + 55, y + 37)
+      theme.setFont(8)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.print(def.currency == "amber" and "ámbar" or "esencia", x + 55, y + 52)
+    end
+    widgets.progressBar(x + 8, y + 64, self.layout.rightW - 16, 4, level / def.max,
+      maxed and theme.colors.green or theme.colors.gold, {})
+    y = y + 80
+  end
+
+  widgets.button(self, x, y, self.layout.rightW, 30, "VER TODAS", {
+    style = "ghost",
+    font = 10,
+    onClick = function()
+      self:goto("upgrades")
+    end,
+  })
+
+  local prestigeY = y + 38
+  local can, reason = prestige.canPrestige(game)
+  local gain = prestige.gain(game)
+  local hoverP = widgets.hover(self, x, prestigeY, self.layout.rightW, 52)
+  if hoverP then
+    self.mouse.hand = true
+    self.tooltip = can and ("Ganarías " .. gain .. " de legado permanente.") or reason
+  end
+  if widgets.click(self, x, prestigeY, self.layout.rightW, 52) then
+    if can then
+      self.prestigeFounders = {}
+      self:openModal("prestige", {})
+    else
+      self:goto("settings")
+      self:toast(reason or "La Gran Migración aún no está disponible.", theme.colors.amber)
+    end
+  end
+  theme.panel(x, prestigeY, self.layout.rightW, 52, {
+    color = can and theme.colors.tealDark or theme.colors.panel,
+    borderColor = can and theme.colors.teal or theme.colors.borderSoft,
+    shadowSize = 4,
+    borderWidth = 2,
+  })
+  theme.iconLegacy(x + 20, prestigeY + 20, 7)
+  theme.setFont(14)
+  theme.setColor(can and theme.colors.text or theme.colors.muted, 1)
+  love.graphics.print("PRESTIGIO", x + 36, prestigeY + 9)
+  theme.setFont(8)
+  theme.setColor(can and theme.colors.goldLight or theme.colors.muted, 1)
+  love.graphics.print(can and ("+" .. gain .. " legado · disponible") or "aún bloqueado", x + 37, prestigeY + 28)
+
+  local statsY = prestigeY + 64
+  theme.panel(x, statsY, self.layout.rightW, 146, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.borderSoft,
+    shadowSize = 3,
+    borderWidth = 1,
+  })
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("COLONIA", x + 10, statsY + 9)
+  theme.setFont(19)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("+" .. theme.fmtRate(economy.totalProduction(game, self.now)) .. "/s", x + 10, statsY + 25)
+  theme.setFont(8)
+  theme.setColor(theme.colors.textDim, 1)
+  local adults = 0
+  for _, dino in ipairs(game.dinos) do
+    if self.now >= (dino.adultAt or 0) then
+      adults = adults + 1
+    end
+  end
+  love.graphics.print("Adultos", x + 10, statsY + 54)
+  love.graphics.print("Huevos", x + 110, statsY + 54)
+  theme.setFont(11)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(adults .. " / " .. #game.dinos, x + 10, statsY + 66)
+  love.graphics.print(#game.eggs .. " / " .. economy.nestCapacity(game), x + 110, statsY + 66)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Pity raro", x + 10, statsY + 92)
+  theme.setColor(theme.colors.blue, 1)
+  love.graphics.print((game.pity.rare or 0) .. " / " .. (config.rates.pity.rareAt - 1), x + 10, statsY + 104)
+  theme.setColor(theme.colors.amber, 1)
+  theme.setFont(8)
+  love.graphics.print("Legendario", x + 110, statsY + 92)
+  theme.setColor(theme.colors.amber, 1)
+  love.graphics.print((game.pity.legendary or 0) .. " / " .. (config.rates.pity.legendaryAt - 1), x + 110, statsY + 104)
+  theme.setFont(7)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Sin conexión · guardado local", x + 10, statsY + 128)
+end
+
+-- Tablero de madera
+function app:drawBoard()
+  local layout = self.layout
+  theme.woodBoard(layout.boardX, layout.boardY, layout.boardW, layout.boardH)
+  theme.phone(886, 80, 1.12)
+  local meta = sceneMeta[self.scene] or sceneMeta.nest
+  theme.goldBar(276, 90, 596, 44, meta.title, {
+    font = 18,
+    icon = meta.icon,
+  })
+  theme.setFont(10)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf(meta.subtitle, 276, 138, 596, "left")
+  theme.drawTicket(292, 681, 38, 15, 0.05)
+  theme.drawTicket(344, 682, 38, 15, -0.04)
+  theme.drawTicket(704, 681, 38, 15, 0.03)
+  theme.drawTicket(756, 682, 38, 15, -0.05)
+  theme.drawTicket(922, 681, 38, 15, 0.04)
 end
 
 function app:drawToasts()
@@ -222,14 +577,19 @@ function app:drawToasts()
     return
   end
   local fade = math.min(1, (4.8 - (time - latest.at)) / 0.5)
-  local w = 360
-  local h = 38
-  local x = 360
-  local y = 9
-  theme.setColor(theme.colors.bg2, 0.97 * fade)
-  love.graphics.rectangle("fill", x, y, w, h, 9, 9)
-  theme.setColor(latest.color, 0.9 * fade)
-  love.graphics.rectangle("fill", x, y, 4, h, 2, 2)
+  local w = 430
+  local h = 40
+  local x = 760
+  local y = 10
+  theme.panel(x, y, w, h, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.goldDark,
+    shadowSize = 3,
+    borderWidth = 2,
+    alpha = 0.98 * fade,
+  })
+  theme.setColor(latest.color, 0.95 * fade)
+  love.graphics.rectangle("fill", x, y, 5, h)
   theme.setFont(10)
   theme.setColor(theme.colors.text, fade)
   love.graphics.printf(latest.message, x + 14, y + 8, w - 24, "left")
@@ -243,7 +603,9 @@ function app:draw()
   local hasModal = self.modal ~= nil
   self.blocked = hasModal
   self:drawHeader()
-  self:drawTabs()
+  self:drawLeftSidebar()
+  self:drawRightSidebar()
+  self:drawBoard()
 
   self.blocked = hasModal
   local scene = scenes[self.scene]

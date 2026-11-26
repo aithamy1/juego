@@ -44,7 +44,7 @@ local function mutationOptions()
 end
 
 local sortOptions = {
-  { value = "reciente", label = "Más recientes" },
+  { value = "reciente", label = "Recientes" },
   { value = "rareza", label = "Rareza" },
   { value = "produccion", label = "Producción" },
   { value = "nombre", label = "Especie" },
@@ -63,8 +63,7 @@ local function filteredDinos(app)
       ok = false
     end
     if filters.mutation ~= "todas" then
-      local mutation = dino.mutation or "ninguna"
-      if mutation ~= filters.mutation then
+      if (dino.mutation or "ninguna") ~= filters.mutation then
         ok = false
       end
     end
@@ -74,33 +73,20 @@ local function filteredDinos(app)
   end
   table.sort(list, function(a, b)
     if filters.sort == "rareza" then
-      local indexA = 1
-      local indexB = 1
+      local ia, ib = 1, 1
       for i, key in ipairs(config.rarityOrder) do
-        if key == a.rarity then
-          indexA = i
-        end
-        if key == b.rarity then
-          indexB = i
-        end
+        if key == a.rarity then ia = i end
+        if key == b.rarity then ib = i end
       end
-      if indexA ~= indexB then
-        return indexA > indexB
-      end
+      if ia ~= ib then return ia > ib end
       return a.id > b.id
     elseif filters.sort == "produccion" then
-      local rateA = economy.dinoRate(a, app.game)
-      local rateB = economy.dinoRate(b, app.game)
-      if rateA ~= rateB then
-        return rateA > rateB
-      end
+      local ra, rb = economy.dinoRate(a, app.game), economy.dinoRate(b, app.game)
+      if ra ~= rb then return ra > rb end
       return a.id > b.id
     elseif filters.sort == "nombre" then
-      local nameA = config.species[a.species].name
-      local nameB = config.species[b.species].name
-      if nameA ~= nameB then
-        return nameA < nameB
-      end
+      local na, nb = config.species[a.species].name, config.species[b.species].name
+      if na ~= nb then return na < nb end
       return a.id < b.id
     end
     return a.id > b.id
@@ -108,135 +94,168 @@ local function filteredDinos(app)
   return list
 end
 
-local function drawDinoCard(app, dino, x, y, w, h, now)
+local function drawCard(app, dino, x, y, w, h, now)
   local hover = widgets.hover(app, x, y, w, h)
   if hover then
     app.mouse.hand = true
-    app.tooltip = "Haz clic para ver la ficha completa."
+    app.tooltip = "Ver la ficha de " .. config.species[dino.species].name .. "."
   end
-  local clicked = widgets.click(app, x, y, w, h)
-  if clicked then
-    if app.selectedDino == dino.id then
-      app.selectedDino = nil
-    else
-      app.selectedDino = dino.id
-    end
+  if widgets.click(app, x, y, w, h) then
+    app.selectedDino = app.selectedDino == dino.id and nil or dino.id
   end
   local selected = app.selectedDino == dino.id
   theme.panel(x, y, w, h, {
     color = hover and theme.colors.panel3 or theme.colors.panel2,
-    borderColor = selected and theme.colors.amber or theme.colors.borderSoft,
+    borderColor = selected and theme.colors.gold or theme.colors.borderSoft,
+    shadowSize = 2,
+    borderWidth = selected and 2 or 1,
   })
-  if selected then
-    theme.setColor(theme.colors.amber, 1)
-    love.graphics.rectangle("fill", x + 8, y + 8, 3, h - 16, 1.5, 1.5)
-  end
-  render.drawDino(dino, x + w / 2, y + 64, 0.48, {})
-  theme.setFont(12)
-  theme.setColor(theme.colors.text, 1)
-  love.graphics.printf(config.species[dino.species].name, x + 8, y + 106, w - 16, "center")
-  local chipWidth = widgets.rarityChip(x + 10, y + 126, dino.rarity, true)
-  if dino.mutation then
-    widgets.chip(x + 14 + chipWidth, y + 126, config.mutations[dino.mutation].name,
-      dino.mutation == "bioluminiscente" and theme.colors.green or theme.colors.purple, { font = 9 })
-  end
+  render.drawDino(dino, x + w / 2, y + 42, 0.34, {})
   theme.setFont(9)
-  if now >= (dino.adultAt or 0) then
-    theme.setColor(theme.colors.textDim, 1)
-    love.graphics.print("Adulto · +" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s", x + 10, y + 154)
-  else
-    theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("Creciendo · " .. theme.fmtTime((dino.adultAt or now) - now), x + 10, y + 154)
-  end
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.printf(config.species[dino.species].name, x + 4, y + 76, w - 8, "center")
+  widgets.rarityChip(x + 8, y + 90, dino.rarity, true)
+  local adult = now >= (dino.adultAt or 0)
+  theme.setFont(8)
+  theme.setColor(adult and theme.colors.textDim or theme.colors.muted, 1)
+  love.graphics.printf(adult and ("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s")
+    or ("Creciendo " .. theme.fmtTime((dino.adultAt or now) - now)), x + 4, y + 114, w - 8, "center")
   if stateModule.isCrossing(app.game, dino.id) then
+    theme.setFont(7)
     theme.setColor(theme.colors.essence, 1)
-    theme.setFont(9)
-    love.graphics.print("EN CRUCE", x + w - 58, y + 10)
+    love.graphics.printf("EN CRUCE", x + 4, y + 128, w - 8, "center")
+  elseif dino.mutation then
+    theme.setFont(7)
+    theme.setColor(theme.colors.purple, 1)
+    love.graphics.printf(config.mutations[dino.mutation].name, x + 4, y + 128, w - 8, "center")
   end
 end
 
 local function drawDetail(app, dino, x, y, w, h, now)
-  theme.panel(x, y, w, h, { color = theme.colors.panel })
+  theme.panel(x, y, w, h, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.border,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
   if not dino then
-    theme.setFont(15)
-    theme.setColor(theme.colors.textDim, 1)
-    love.graphics.printf("Ficha del ejemplar", x + 20, y + 24, w - 40, "left")
-    theme.setFont(12)
-    theme.setColor(theme.colors.muted, 1)
-    love.graphics.printf("Selecciona un dinosaurio de la rejilla para ver sus genes, su producción y las acciones disponibles.", x + 20, y + 58, w - 40, "left")
+    local game = app.game
+    local adults = 0
+    for _, candidate in ipairs(game.dinos) do
+      if now >= (candidate.adultAt or 0) then
+        adults = adults + 1
+      end
+    end
     theme.setFont(11)
+    theme.setColor(theme.colors.gold, 1)
+    love.graphics.printf("Ficha del ejemplar", x + 10, y + 12, w - 20, "left")
+    theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("En el criadero hay " .. #app.game.dinos .. " ejemplares.", x + 20, y + 126)
-    theme.setFont(10)
-    love.graphics.print("Los adultos producen ámbar. Los jóvenes maduran solos.", x + 20, y + 148)
+    love.graphics.printf("Selecciona una tarjeta para ver sus genes y acciones.", x + 10, y + 34, w - 20, "left")
+
+    theme.panel(x + 10, y + 76, w - 20, 148, {
+      color = theme.colors.panel2,
+      borderColor = theme.colors.borderSoft,
+      shadowSize = 0,
+      borderWidth = 1,
+    })
+    theme.setFont(8)
+    theme.setColor(theme.colors.gold, 1)
+    love.graphics.print("RESUMEN DEL CRIADERO", x + 20, y + 86)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Ejemplares", x + 20, y + 106)
+    love.graphics.print("Adultos", x + 130, y + 106)
+    theme.setFont(13)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.print(tostring(#game.dinos), x + 20, y + 118)
+    love.graphics.print(adults .. " / " .. #game.dinos, x + 130, y + 118)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Producción", x + 20, y + 144)
+    theme.setFont(12)
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.print("+" .. theme.fmtRate(economy.totalProduction(game, now)) .. "/s", x + 20, y + 156)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Mutaciones", x + 130, y + 144)
+    theme.setFont(12)
+    theme.setColor(theme.colors.purple, 1)
+    love.graphics.print(tostring(game.stats.mutations or 0), x + 130, y + 156)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Pity raro", x + 20, y + 184)
+    theme.setColor(theme.colors.blue, 1)
+    love.graphics.print((game.pity.rare or 0) .. " / " .. (config.rates.pity.rareAt - 1), x + 100, y + 184)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Legendario", x + 130, y + 184)
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.print((game.pity.legendary or 0) .. " / " .. (config.rates.pity.legendaryAt - 1), x + 130, y + 196)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Capacidad del nido " .. economy.nestCapacity(game), x + 20, y + 210)
     return
   end
 
   local adult = now >= (dino.adultAt or 0)
-  render.drawDino(dino, x + w / 2, y + 95, 1.0, {})
-  theme.setFont(21)
+  render.drawDino(dino, x + w / 2, y + 80, 0.82, {})
+  theme.setFont(15)
   theme.setColor(theme.colors.text, 1)
-  love.graphics.printf(config.species[dino.species].name, x + 16, y + 151, w - 32, "center")
-  local chipW = widgets.rarityChip(x + 20, y + 181, dino.rarity)
+  love.graphics.printf(config.species[dino.species].name, x + 10, y + 134, w - 20, "center")
+  local chipW = widgets.rarityChip(x + 10, y + 158, dino.rarity)
   if dino.mutation then
-    widgets.chip(x + 28 + chipW, y + 181, config.mutations[dino.mutation].name, theme.colors.purple, { font = 10 })
+    widgets.chip(x + 18 + chipW, y + 158, config.mutations[dino.mutation].name, theme.colors.purple, { font = 8 })
   end
-  theme.setFont(10)
+  theme.setFont(8)
   theme.setColor(adult and theme.colors.green or theme.colors.muted, 1)
   love.graphics.printf(adult and "Adulto" or ("Creciendo: " .. theme.fmtTime((dino.adultAt or now) - now)),
-    x + 16, y + 209, w - 32, "center")
+    x + 10, y + 180, w - 20, "center")
 
-  local labelX = x + 20
-  local valueX = x + 138
-  local rowY = y + 232
-  theme.setFont(10)
-  local genes = {
+  local rowY = y + 200
+  local rows = {
     { "Patrón", config.patterns[dino.genes.pattern].name },
     { "Color", config.colors[dino.genes.primaryColor].name },
     { "Secundario", config.secondaryColors[dino.genes.secondaryColor].name },
     { "Cresta", config.crests[dino.genes.crest].name },
   }
-  for _, row in ipairs(genes) do
+  for _, row in ipairs(rows) do
+    theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print(row[1], labelX, rowY)
+    love.graphics.print(row[1], x + 12, rowY)
     theme.setColor(theme.colors.text, 1)
-    love.graphics.print(row[2], valueX, rowY)
-    rowY = rowY + 18
+    love.graphics.print(row[2], x + 90, rowY)
+    rowY = rowY + 16
   end
 
-  rowY = rowY + 6
+  rowY = rowY + 4
+  theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("Genes funcionales", labelX, rowY)
-  rowY = rowY + 18
+  love.graphics.print("Genes funcionales", x + 12, rowY)
+  rowY = rowY + 16
   for _, gene in ipairs(config.functionalOrder) do
     local value = dino.functional[gene] or 1
-    theme.setFont(10)
+    theme.setFont(8)
     theme.setColor(theme.colors.textDim, 1)
-    love.graphics.print(config.functional[gene].name, labelX, rowY)
-    theme.setColor(theme.colors.border, 0.8)
-    love.graphics.rectangle("fill", x + 120, rowY + 4, 120, 6, 3, 3)
-    theme.setColor(theme.colors.green, 1)
-    love.graphics.rectangle("fill", x + 120, rowY + 4, 120 * value / 5, 6, 3, 3)
+    love.graphics.print(config.functional[gene].short, x + 12, rowY)
+    widgets.progressBar(x + 46, rowY + 3, 140, 5, value / 5, theme.colors.green, {})
     theme.setColor(theme.colors.text, 1)
-    love.graphics.print(tostring(value), x + 248, rowY)
-    rowY = rowY + 17
+    love.graphics.print(tostring(value), x + 196, rowY)
+    rowY = rowY + 14
   end
 
-  local rate = economy.dinoRate(dino, app.game)
-  theme.setFont(11)
+  theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("Producción", labelX, rowY + 7)
-  theme.setFont(14)
+  love.graphics.print("Producción", x + 12, rowY + 6)
+  theme.setFont(12)
   theme.setColor(theme.colors.amber, 1)
-  love.graphics.print("+" .. theme.fmtRate(rate) .. " ámbar/s", x + 120, rowY + 4)
+  love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s", x + 90, rowY + 4)
 
   local busy = stateModule.isCrossing(app.game, dino.id)
-  local canCross = adult and not busy
-  widgets.button(app, x + 20, y + h - 100, w - 40, 38, "Enviar a cruces", {
+  widgets.button(app, x + 12, y + 378, w - 24, 40, "ENVIAR A CRUCES", {
     style = "primary",
-    disabled = not canCross,
-    tooltip = busy and "Este ejemplar está en un cruce." or (not adult and "Debe ser adulto para cruzar.")
-      or "Elige este ejemplar como progenitor.",
+    font = 9,
+    disabled = busy or not adult,
+    tooltip = busy and "Este ejemplar está en un cruce." or (not adult and "Debe ser adulto.") or "Elegir como progenitor.",
     onClick = function()
       local selection = app.crossSelect
       if not selection.a then
@@ -247,7 +266,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
       elseif not selection.b then
         local first = stateModule.findDino(app.game, selection.a)
         if first and first.species ~= dino.species then
-          app:toast("Los cruces del MVP son entre la misma especie.", theme.colors.red)
+          app:toast("Los cruces son entre la misma especie.", theme.colors.red)
           return
         end
         selection.b = dino.id
@@ -259,10 +278,11 @@ local function drawDetail(app, dino, x, y, w, h, now)
       end
     end,
   })
-  widgets.button(app, x + 20, y + h - 52, w - 40, 36, "Liberar ejemplar", {
+  widgets.button(app, x + 12, y + 426, w - 24, 30, "LIBERAR EJEMPLAR", {
     style = "danger",
+    font = 8,
     disabled = busy,
-    tooltip = busy and "No puedes liberar un ejemplar que está en un cruce." or "Obtienes esencia según su rareza.",
+    tooltip = busy and "No puedes liberar un ejemplar en cruce." or "Obtienes esencia según su rareza.",
     onClick = function()
       if dino.rarity == "epic" or dino.rarity == "legendary" then
         app:openModal("release", { dinoId = dino.id })
@@ -280,35 +300,34 @@ end
 function breeding.draw(app)
   local game = app.game
   local now = app.now
-
-  widgets.sectionTitle("Criadero", "Todos tus ejemplares. Filtra, ordena y elige cuáles producen, cruzan o vuelven al bosque.", 28, 120, 820)
-
+  local x = app.layout.contentX
+  local y = app.layout.contentY
   local filters = app.filters
-  local y = 170
-  widgets.cycle(app, 28, y, 190, 52, "Especie", filters.species, speciesOptions(), function(value)
+
+  widgets.cycle(app, x, y, 150, 44, "Especie", filters.species, speciesOptions(), function(value)
     filters.species = value
     app.scroll.breeding_grid = 0
   end)
-  widgets.cycle(app, 226, y, 160, 52, "Rareza", filters.rarity, rarityOptions(), function(value)
+  widgets.cycle(app, x + 160, y, 120, 44, "Rareza", filters.rarity, rarityOptions(), function(value)
     filters.rarity = value
     app.scroll.breeding_grid = 0
   end)
-  widgets.cycle(app, 394, y, 190, 52, "Mutación", filters.mutation, mutationOptions(), function(value)
+  widgets.cycle(app, x + 290, y, 140, 44, "Mutación", filters.mutation, mutationOptions(), function(value)
     filters.mutation = value
     app.scroll.breeding_grid = 0
   end)
-  widgets.cycle(app, 592, y, 170, 52, "Orden", filters.sort, sortOptions, function(value)
+  widgets.cycle(app, x + 440, y, 120, 44, "Orden", filters.sort, sortOptions, function(value)
     filters.sort = value
   end)
 
   local list = filteredDinos(app)
-  theme.setFont(9)
+  theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.printf(#list .. " / " .. #game.dinos, 766, 168, 100, "right")
-  widgets.button(app, 772, 188, 94, 32, "Limpiar", {
+  love.graphics.printf(#list .. " / " .. #game.dinos, x + 574, y + 4, 70, "right")
+  widgets.button(app, x + 650, y + 7, 78, 30, "LIMPIAR", {
     style = "ghost",
-    font = 10,
-    tooltip = "Quitar todos los filtros.",
+    font = 8,
+    tooltip = "Quitar filtros.",
     onClick = function()
       filters.species = "todas"
       filters.rarity = "todas"
@@ -323,32 +342,30 @@ function breeding.draw(app)
     app.selectedDino = nil
   end
 
-  local columns = 5
-  local cardW = 156
-  local cardH = 180
-  local gapX = 12
-  local gapY = 12
+  local columns = 4
+  local cardW = 108
+  local cardH = 144
+  local gapX = 10
+  local gapY = 10
   local rows = math.max(1, math.ceil(math.max(1, #list) / columns))
-  local contentH = rows * (cardH + gapY)
-  widgets.scroll(app, "breeding_grid", 28, 238, 828, 444, contentH, function(offset)
+  widgets.scroll(app, "breeding_grid", x, y + 54, 462, 462, rows * (cardH + gapY), function(offset)
     if #list == 0 then
-      widgets.emptyState(28, 258, 828, 160, "No hay ejemplares con esos filtros",
-        "Prueba con otros filtros o incuba huevos en el Nido.")
+      widgets.emptyState(x, y + 78, 462, 140, "Sin ejemplares con esos filtros",
+        "Prueba otros filtros o incuba huevos en el Nido.")
       return
     end
     for index, dino in ipairs(list) do
       local row = math.floor((index - 1) / columns)
       local col = (index - 1) % columns
-      local x = 28 + col * (cardW + gapX)
-      local cardY = 238 + row * (cardH + gapY) - offset
-      if cardY + cardH >= 238 and cardY <= 238 + 444 then
-        drawDinoCard(app, dino, x, cardY, cardW, cardH, now)
+      local dx = x + col * (cardW + gapX)
+      local dy = y + 54 + row * (cardH + gapY) - offset
+      if dy + cardH >= y + 54 and dy <= y + 516 then
+        drawCard(app, dino, dx, dy, cardW, cardH, now)
       end
     end
   end)
 
-  -- La ficha siempre usa el ejemplar seleccionado, aunque el scroll lo oculte.
-  drawDetail(app, selected, 876, 170, 376, 520, now)
+  drawDetail(app, selected, x + 472, y + 54, 256, 462, now)
 end
 
 return breeding

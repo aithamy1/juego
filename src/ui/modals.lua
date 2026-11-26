@@ -378,8 +378,10 @@ local function drawReveal(app, modal)
   local y = (720 - 590) / 2
   theme.panel(x, y, 760, 590, {
     color = theme.colors.panel,
-    radius = 18,
-    borderColor = theme.rarityColor(reveal.rarity),
+    radius = 0,
+    borderColor = theme.colors.gold,
+    borderWidth = 3,
+    shadowSize = 7,
   })
 
   local elapsed = love.timer.getTime() - (modal.revealStart or 0)

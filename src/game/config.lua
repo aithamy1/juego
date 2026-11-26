@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "1.0.0"
+config.version = "1.1.0"
 config.saveVersion = 1
 
 config.window = {
@@ -63,35 +63,35 @@ config.rarityOrder = { "common", "uncommon", "rare", "epic", "legendary" }
 config.rarity = {
   common = {
     name = "Común",
-    color = { 0.70, 0.76, 0.68 },
+    color = { 0.76, 0.80, 0.68 },
     essence = 1,
     amberPerSec = 0.12,
     legacy = 1,
   },
   uncommon = {
     name = "Poco común",
-    color = { 0.42, 0.72, 0.45 },
+    color = { 0.42, 0.84, 0.44 },
     essence = 2,
     amberPerSec = 0.28,
     legacy = 2,
   },
   rare = {
     name = "Raro",
-    color = { 0.38, 0.62, 0.86 },
+    color = { 0.35, 0.66, 1.00 },
     essence = 4,
     amberPerSec = 0.65,
     legacy = 4,
   },
   epic = {
     name = "Épico",
-    color = { 0.66, 0.44, 0.85 },
+    color = { 0.82, 0.46, 0.98 },
     essence = 9,
     amberPerSec = 1.50,
     legacy = 8,
   },
   legendary = {
     name = "Legendario",
-    color = { 0.93, 0.72, 0.28 },
+    color = { 1.00, 0.74, 0.20 },
     essence = 22,
     amberPerSec = 4.00,
     legacy = 16,

@@ -34,12 +34,7 @@ local function speciesSample(app, species)
   return {
     id = 1,
     species = species,
-    genes = {
-      pattern = "liso",
-      primaryColor = "verde",
-      secondaryColor = "crema",
-      crest = "ninguna",
-    },
+    genes = { pattern = "liso", primaryColor = "verde", secondaryColor = "crema", crest = "ninguna" },
     mutation = nil,
   }, true
 end
@@ -63,95 +58,103 @@ end
 
 function dinodex.draw(app)
   local game = app.game
+  local x = app.layout.contentX
+  local y = app.layout.contentY
   local totalPerSpecies = genetics.dexTotalPerSpecies()
   local total = genetics.dexTotal()
   local completion = game.dinodex.total / total
-  widgets.sectionTitle("Dinodex", "Cada combinación de patrón, color, cresta y mutación cuenta. No se reinicia con la Gran Migración.", 28, 120, 900)
-
-  theme.panel(28, 170, 1224, 94, { color = theme.colors.panel })
-  theme.setFont(10)
-  theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("Completitud global", 48, 184)
-  theme.setFont(28)
-  theme.setColor(theme.colors.amber, 1)
-  love.graphics.print(theme.fmtPct(completion, 1), 48, 200)
-  theme.setFont(10)
-  theme.setColor(theme.colors.muted, 1)
-  love.graphics.print(theme.fmtInt(game.dinodex.total) .. " / " .. theme.fmtInt(total) .. " variantes", 48, 236)
-  widgets.progressBar(170, 211, 420, 12, completion, theme.colors.amber)
-
-  local milestoneX = 640
   local bonusPct = config.dinodex.milestoneBonus * 100
-  local milestoneLabels = {}
+
+  theme.panel(x, y, 728, 68, {
+    color = theme.colors.panel2,
+    borderColor = theme.colors.border,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("COMPLETITUD GLOBAL", x + 12, y + 9)
+  theme.setFont(24)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print(theme.fmtPct(completion, 1), x + 12, y + 22)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print(theme.fmtInt(game.dinodex.total) .. " / " .. theme.fmtInt(total), x + 12, y + 51)
+  widgets.progressBar(x + 130, y + 36, 270, 10, completion, theme.colors.purple, {})
+
+  local chipX = x + 420
   for i, fraction in ipairs(config.dinodex.milestoneFractions) do
     local claimed = game.dinodex.milestones[i]
-    local label = math.floor(fraction * 100) .. " %"
-    milestoneLabels[#milestoneLabels + 1] = math.floor(fraction * 100) .. " %"
-    local width = widgets.chip(milestoneX, 194, label, claimed and theme.colors.green or theme.colors.muted,
-      { font = 11 })
-    theme.setFont(9)
+    local label = math.floor(fraction * 100) .. "%"
+    local width = widgets.chip(chipX, y + 10, label, claimed and theme.colors.green or theme.colors.muted, { font = 9 })
+    theme.setFont(7)
     theme.setColor(claimed and theme.colors.green or theme.colors.muted, 1)
-    love.graphics.print(claimed and ("+" .. theme.fmt(bonusPct, 0) .. " % producción") or "bloqueado", milestoneX, 217)
-    milestoneX = milestoneX + math.max(width, 76) + 10
+    love.graphics.print(claimed and ("+" .. theme.fmt(bonusPct, 0) .. "%") or "—", chipX, y + 31)
+    chipX = chipX + width + 7
   end
-  theme.setFont(10)
-  theme.setColor(theme.colors.muted, 1)
-  love.graphics.printf("Hitos al " .. table.concat(milestoneLabels, ", ") .. ".\nCada uno da +"
-    .. theme.fmt(bonusPct, 0) .. " % de producción permanente.", 1000, 186, 220, "right")
+  theme.setFont(8)
   theme.setColor(theme.colors.green, 1)
-  theme.setFont(11)
-  love.graphics.printf("Bonus actual: +" .. theme.fmt(game.dinodex.milestoneCount * bonusPct, 0) .. " %",
-    1000, 228, 220, "right")
+  love.graphics.printf("Bonus +" .. theme.fmt(game.dinodex.milestoneCount * bonusPct, 0) .. "%",
+    x + 600, y + 12, 112, "right")
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Hitos permanentes", x + 600, y + 25, 112, "right")
 
   local stats = speciesStats(game)
-  local cardW = 596
-  local cardH = 128
-  local gapX = 24
-  local gapY = 10
-  local startY = 278
+  local cardW = 354
+  local cardH = 136
+  local gapX = 20
+  local gapY = 12
+  local startY = 238
   for index, species in ipairs(config.speciesOrder) do
     local col = (index - 1) % 2
     local row = math.floor((index - 1) / 2)
-    local x = 28 + col * (cardW + gapX)
-    local y = startY + row * (cardH + gapY)
+    local cx = x + col * (cardW + gapX)
+    local cy = startY + row * (cardH + gapY)
     local entry = stats[species]
     local percent = entry.total / totalPerSpecies
     local sample, silhouette = speciesSample(app, species)
-    local hover = widgets.hover(app, x, y, cardW, cardH)
-    theme.panel(x, y, cardW, cardH, {
+    local hover = widgets.hover(app, cx, cy, cardW, cardH)
+    if hover then
+      app.mouse.hand = true
+      app.tooltip = config.species[species].desc
+    end
+    theme.panel(cx, cy, cardW, cardH, {
       color = hover and theme.colors.panel3 or theme.colors.panel2,
       borderColor = entry.total > 0 and theme.colors.border or theme.colors.borderSoft,
+      shadowSize = 3,
+      borderWidth = 2,
     })
-    render.drawDino(sample, x + 76, y + 66, 0.56, { silhouette = silhouette, alpha = silhouette and 0.8 or 1 })
-    theme.setFont(16)
+    render.drawDino(sample, cx + 58, cy + 82, 0.42, { silhouette = silhouette, alpha = silhouette and 0.7 or 1 })
+    theme.setFont(11)
     theme.setColor(theme.colors.text, 1)
-    love.graphics.print(config.species[species].name, x + 148, y + 16)
-    theme.setFont(10)
+    love.graphics.print(config.species[species].name, cx + 112, cy + 10)
+    theme.setFont(8)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print(entry.total .. " / " .. totalPerSpecies .. " variantes", x + 148, y + 40)
-    widgets.progressBar(x + 148, y + 60, 380, 8, percent, theme.colors.amber)
-    theme.setFont(10)
+    love.graphics.print(entry.total .. " / " .. totalPerSpecies .. " variantes", cx + 112, cy + 29)
+    widgets.progressBar(cx + 112, cy + 45, 220, 7, percent, theme.colors.purple, {})
+    theme.setFont(8)
     theme.setColor(theme.colors.textDim, 1)
-    love.graphics.print(theme.fmtPct(percent, 1), x + 148, y + 73)
+    love.graphics.print(theme.fmtPct(percent, 1), cx + 112, cy + 57)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print(entry.mutations .. " con mutación descubierta", x + 260, y + 73)
+    love.graphics.print(entry.mutations .. " con mutación", cx + 180, cy + 57)
 
-    theme.setFont(9)
-    theme.setColor(theme.colors.muted, 1)
-    local mutationsFound = {}
+    local mutationNames = {}
     for _, mutation in ipairs(config.mutationOrder) do
       for _, variant in pairs(game.dinodex.variants) do
         if variant.species == species and variant.mutation == mutation then
-          mutationsFound[#mutationsFound + 1] = config.mutations[mutation].name
+          mutationNames[#mutationNames + 1] = config.mutations[mutation].name
           break
         end
       end
     end
-    local mutationText = #mutationsFound > 0 and table.concat(mutationsFound, " · ") or "Aún sin mutaciones"
-    love.graphics.printf(mutationText, x + 148, y + 92, 300, "left")
-    widgets.button(app, x + cardW - 132, y + 86, 112, 28, "Ver catálogo", {
+    theme.setFont(8)
+    theme.setColor(theme.colors.purple, #mutationNames > 0 and 1 or 0.4)
+    love.graphics.printf(#mutationNames > 0 and table.concat(mutationNames, " · ") or "Aún sin mutaciones",
+      cx + 112, cy + 74, 228, "left")
+
+    widgets.button(app, cx + cardW - 92, cy + 98, 80, 26, "VER", {
       style = "ghost",
-      font = 10,
+      font = 8,
       onClick = function()
         app.dexSpecies = species
         app.dexMutation = "todas"
