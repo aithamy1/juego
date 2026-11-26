@@ -1,0 +1,4 @@
+*.love
+save.json
+.luarocks/
+tools/
