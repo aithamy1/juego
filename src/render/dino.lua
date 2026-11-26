@@ -344,7 +344,8 @@ function render.drawDino(dino, x, y, scale, opts)
 
   love.graphics.push()
   love.graphics.translate(x, y)
-  love.graphics.scale(finalScale, finalScale)
+  local flip = opts.flip and -1 or 1
+  love.graphics.scale(finalScale * flip, finalScale)
 
   color({ 0, 0, 0 }, 0.22 * alpha)
   love.graphics.ellipse("fill", 0, 48, 50, 7)
