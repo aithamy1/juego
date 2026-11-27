@@ -56,35 +56,78 @@ return function(t)
     t.assertNear(summary.amber, rate * 3600, 0.01, "solo la hora adulta")
   end)
 
-  t.test("el nido genera huevos con el intervalo configurado", function()
+  t.test("cada adulto pone un huevo en su propio intervalo", function()
     local now = 1800000000
     local s = state.new(1, now)
-    state.update(s, now + 60)
-    t.assertEqual(#s.eggs, 4, "1 inicial + 3 generados")
+    local dino = adultDino(now)
+    dino.eggTimer = 0
+    s.dinos = { dino }
+    local interval = economy.layInterval(dino, s)
+    local added = economy.tickDinoEggs(s, now + interval + 0.1, now)
+    t.assertEqual(added, 1)
+    t.assertEqual(#s.eggs, 2, "1 inicial + 1 puesto")
+    t.assertTrue(interval > 0)
+  end)
+
+  t.test("un dinosaurio bebé no pone huevos", function()
+    local now = 1800000000
+    local s = state.new(1, now)
+    local dino = adultDino(now)
+    dino.adultAt = now + 3600
+    dino.eggTimer = 0
+    s.dinos = { dino }
+    t.assertEqual(economy.tickDinoEggs(s, now + 600, now), 0)
+    t.assertEqual(#s.eggs, 1)
   end)
 
   t.test("el nido respeta la capacidad", function()
     local now = 1800000000
     local s = state.new(1, now)
+    local dino = adultDino(now)
+    dino.eggTimer = 0
+    s.dinos = { dino }
     while #s.eggs < economy.nestCapacity(s) do
       s.eggs[#s.eggs + 1] = state.makeEgg(s, now, "nido")
     end
-    state.update(s, now + 600)
+    economy.tickDinoEggs(s, now + 3600, now)
     t.assertEqual(#s.eggs, economy.nestCapacity(s))
-    t.assertTrue(s.nestTimer <= economy.eggInterval(s))
   end)
 
   t.test("el tope diario detiene la generación", function()
     local now = 1800000000
     local s = state.new(1, now)
+    local dino = adultDino(now)
+    dino.eggTimer = 0
+    s.dinos = { dino }
     s.settings.dailyCap = 5
-    state.update(s, now + 1000)
+    economy.tickDinoEggs(s, now + 100000, now)
     t.assertLessOrEqual(s.daily.eggs, 5, "huevos del día")
+  end)
+
+  t.test("el intervalo de puesta varía por especie, rareza y genética", function()
+    local now = 1800000000
+    local s = state.new(1, now)
+    local a = adultDino(now)
+    local b = adultDino(now)
+    b.id = 99
+    b.species = "velociraptor"
+    b.rarity = "epic"
+    b.functional.fertility = 5
+    local ia = economy.layInterval(a, s)
+    local ib = economy.layInterval(b, s)
+    t.assertTrue(ia ~= ib, "los intervalos deben ser distintos")
+    t.assertTrue(ib < ia, "el épico y fértil debe poner antes")
+    local s2 = state.new(2, now)
+    s2.dinos = { a }
+    local solo = economy.layInterval(a, s2)
+    s2.dinos = { a, b }
+    local colonia = economy.layInterval(a, s2)
+    t.assertTrue(colonia > solo, "la colonia grande debe alargar la puesta")
   end)
 
   t.test("los costes de mejora crecen y se detienen en el máximo", function()
     t.assertEqual(economy.upgradeCost("generator", 0), 35)
-    t.assertEqual(economy.upgradeCost("generator", 1), math.floor(35 * 1.70))
+    t.assertEqual(economy.upgradeCost("generator", 1), math.floor(35 * config.upgrades.generator.growth))
     t.assertEqual(economy.upgradeCost("generator", config.upgrades.generator.max), nil)
   end)
 

@@ -342,16 +342,27 @@ local function drawGenerator(app, x, y, w, game, now)
     shadowSize = 3,
     borderWidth = 2,
   })
+  if widgets.hover(app, x, y, w, 64) then
+    app.tooltip = "Cada adulto pone a su ritmo. Una colonia grande alarga la puesta."
+  end
   render.egg(x + 26, y + 34, 0.40, {})
+  local remaining, eggDino, interval = economy.nextEggInfo(game, now)
   theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("PRÓXIMO HUEVO", x + 48, y + 7)
+  love.graphics.print("PRÓXIMO HUEVO" .. (eggDino and (" · " .. config.species[eggDino.species].short) or ""),
+    x + 48, y + 7)
   theme.setFont(16)
   theme.setColor(theme.colors.gold, 1)
-  local interval = economy.eggInterval(game)
-  local remaining = math.max(0, interval - game.nestTimer)
-  love.graphics.print(theme.fmtTime(remaining), x + 48, y + 20)
-  widgets.progressBar(x + 48, y + 42, 224, 6, game.nestTimer / interval, theme.colors.amber, {})
+  if eggDino then
+    love.graphics.print(theme.fmtTime(math.max(0, remaining)), x + 48, y + 20)
+    widgets.progressBar(x + 48, y + 42, 224, 6,
+      1 - math.max(0, remaining) / math.max(1, interval), theme.colors.amber, {})
+  else
+    theme.setFont(11)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Sin adultos", x + 48, y + 24)
+    widgets.progressBar(x + 48, y + 42, 224, 6, 0, theme.colors.amber, {})
+  end
 
   theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
@@ -365,6 +376,7 @@ local function drawGenerator(app, x, y, w, game, now)
     style = canIncubate and "primary" or "secondary",
     disabled = not canIncubate,
     font = 9,
+    tooltip = "Mueve todos los huevos posibles a incubadoras libres.",
     onClick = function()
       local started = stateModule.incubateAll(game, now)
       if started > 0 then
@@ -556,8 +568,16 @@ function nest.draw(app)
   local rows = math.max(1, math.ceil(math.max(1, #game.eggs) / columns))
   widgets.scroll(app, "nest_eggs", x + 6, eggsY + 30, 442, 182, rows * (cardH + gap), function(offset)
     if #game.eggs == 0 then
-      widgets.emptyState(x + 6, eggsY + 46, 442, 120, "No hay huevos en el nido",
-        "El siguiente aparece en " .. theme.fmtTime(math.max(0, economy.eggInterval(game) - game.nestTimer)) .. ".")
+      local eggRemaining = economy.nextEggInfo(game, now)
+      local emptyBody
+      if #game.pendingReveals > 0 then
+        emptyBody = "Huevo listo para abrir. Pulsa ABRIR HUEVOS."
+      elseif eggRemaining then
+        emptyBody = "El siguiente aparece en " .. theme.fmtTime(math.max(0, eggRemaining)) .. "."
+      else
+        emptyBody = "Madura un adulto para que empiece la puesta."
+      end
+      widgets.emptyState(x + 6, eggsY + 46, 442, 120, "No hay huevos en el nido", emptyBody)
       return
     end
     for index, egg in ipairs(game.eggs) do

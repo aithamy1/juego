@@ -240,6 +240,7 @@ function state.addDino(s, data, now)
     adult = false,
     role = data.role,
     habitat = data.habitat,
+    eggTimer = 0,
     lineage = data.lineage or {},
   }
   for _, gene in ipairs(genetics.visibleOrder) do
@@ -1080,7 +1081,7 @@ function state.update(s, now)
       state.addCrossEgg(s, now)
     end
 
-    economy.tickNest(s, now, dt)
+    economy.tickDinoEggs(s, now, now - dt)
 
     state.refreshAdults(s, now)
   end
@@ -1128,7 +1129,7 @@ function state.applyOffline(s, now)
     end
   end
 
-  summary.eggs = economy.tickNest(s, now, credited)
+  summary.eggs = economy.tickDinoEggs(s, now, from)
   summary.amber = economy.offlineProduction(s, from, now)
   s.amber = s.amber + summary.amber
   s.stats.amberEarned = (s.stats.amberEarned or 0) + summary.amber
@@ -1318,6 +1319,7 @@ function state.normalize(s)
     if not dino.adultAt then
       dino.adultAt = (dino.bornAt or os.time()) + economy.dinoAdultTime(dino)
     end
+    dino.eggTimer = math.max(0, dino.eggTimer or 0)
     dino.adult = (dino.adultAt or 0) <= (s.lastTick or os.time())
   end
   s.nextDinoId = math.max(s.nextDinoId or 1, maxDinoId + 1)

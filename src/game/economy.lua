@@ -11,10 +11,60 @@ local function hasDecoration(state, key)
   return state.habitats and state.habitats[key] and state.habitats[key].decor
 end
 
-function economy.eggInterval(state)
+local function hash(n)
+  local value = math.sin(n * 12.9898 + 78.233) * 43758.5453
+  return value - math.floor(value)
+end
+
+function economy.adultCount(state, now)
+  now = now or state.lastTick or os.time()
+  local count = 0
+  for _, dino in ipairs(state.dinos or {}) do
+    if (dino.adultAt or 0) <= now then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+function economy.layInterval(dino, state, adults, now)
+  local species = config.species[dino.species] or config.species.triceratops
+  local rarity = config.rarity[dino.rarity] or config.rarity.common
   local level = (state.upgrades and state.upgrades.generator) or 0
   local def = config.upgrades.generator
-  return math.max(def.min, config.time.eggInterval * (def.factor ^ level))
+  local fertility = (dino.functional and dino.functional.fertility) or 1
+  local jitter = 1 + (hash(dino.id or 0) * 2 - 1) * config.time.layJitter
+  if not adults then
+    adults = economy.adultCount(state, now)
+  end
+  local colonyFactor = 1 + config.time.colonyLayPenalty * math.max(0, adults - 1)
+  local interval = (species.layTime or 600)
+    * (rarity.layMultiplier or 1)
+    * (1 - config.time.layFertilityReduction * fertility)
+    * jitter
+    * (def.factor ^ level)
+    * colonyFactor
+  return math.max(def.min, interval)
+end
+
+function economy.nextEggInfo(state, now)
+  now = now or state.lastTick or os.time()
+  local adults = economy.adultCount(state, now)
+  local best = nil
+  for _, dino in ipairs(state.dinos or {}) do
+    if (dino.adultAt or 0) <= now then
+      local interval = economy.layInterval(dino, state, adults, now)
+      local timer = math.min(interval, math.max(0, dino.eggTimer or 0))
+      local remaining = interval - timer
+      if not best or remaining < best.remaining then
+        best = { remaining = remaining, dino = dino, interval = interval }
+      end
+    end
+  end
+  if best then
+    return best.remaining, best.dino, best.interval
+  end
+  return nil
 end
 
 function economy.incubateTime(state)
@@ -191,35 +241,68 @@ function economy.newNestEgg(state, now, kind)
   return egg
 end
 
--- Añade huevos del nido según el tiempo transcurrido. Devuelve cuántos añadió.
-function economy.tickNest(state, now, elapsed)
+-- Avanza el temporizador individual de cada adulto y añade sus huevos.
+function economy.tickDinoEggs(state, now, from)
   economy.ensureDaily(state, now)
-  if elapsed <= 0 then
+  from = from or now
+  if now <= from then
     return 0
   end
-  local interval = economy.eggInterval(state)
   local capacity = economy.nestCapacity(state)
   local cap = economy.dailyCap(state)
   local added = 0
+  local entries = {}
+  local adults = economy.adultCount(state, now)
 
-  if #state.eggs >= capacity then
-    state.nestTimer = math.min(state.nestTimer + elapsed, interval)
-    return 0
+  for _, dino in ipairs(state.dinos or {}) do
+    local adultAt = dino.adultAt or 0
+    local startAt = math.max(from, adultAt)
+    if startAt < now then
+      local interval = economy.layInterval(dino, state, adults, now)
+      local timer = math.max(0, math.min(interval, dino.eggTimer or 0))
+      entries[#entries + 1] = {
+        dino = dino,
+        interval = interval,
+        timer = timer,
+        startAt = startAt,
+        nextAt = startAt + (interval - timer),
+        lastAt = nil,
+      }
+    else
+      dino.eggTimer = 0
+    end
   end
 
-  state.nestTimer = state.nestTimer + elapsed
-  while state.nestTimer >= interval
-    and #state.eggs < capacity
-    and (cap == 0 or state.daily.eggs < cap) do
-    state.nestTimer = state.nestTimer - interval
-    local egg = economy.newNestEgg(state, now, "nido")
+  local function canLay()
+    return #state.eggs < capacity and (cap == 0 or state.daily.eggs < cap)
+  end
+
+  while canLay() do
+    local best = nil
+    for _, entry in ipairs(entries) do
+      if entry.nextAt <= now and (not best or entry.nextAt < best.nextAt) then
+        best = entry
+      end
+    end
+    if not best then
+      break
+    end
+    local egg = economy.newNestEgg(state, best.nextAt, "nido")
     state.eggs[#state.eggs + 1] = egg
     state.daily.eggs = state.daily.eggs + 1
     added = added + 1
+    best.lastAt = best.nextAt
+    best.nextAt = best.nextAt + best.interval
   end
 
-  if #state.eggs >= capacity or (cap > 0 and state.daily.eggs >= cap) then
-    state.nestTimer = math.min(state.nestTimer, interval)
+  for _, entry in ipairs(entries) do
+    local timer
+    if entry.lastAt then
+      timer = now - entry.lastAt
+    else
+      timer = entry.timer + (now - entry.startAt)
+    end
+    entry.dino.eggTimer = math.min(entry.interval, math.max(0, timer))
   end
 
   return added
@@ -237,7 +320,12 @@ end
 function economy.upgradeEffect(key, state)
   local level = (state.upgrades and state.upgrades[key]) or 0
   if key == "generator" then
-    return string.format("Huevo cada %.0f s", economy.eggInterval(state))
+    local level = (state.upgrades and state.upgrades.generator) or 0
+    local reduction = 1 - (config.upgrades.generator.factor ^ level)
+    if reduction < 0.005 then
+      return "Puesta normal"
+    end
+    return string.format("Puesta -%d %%", math.floor(reduction * 100))
   elseif key == "incubators" then
     local slots = economy.incubatorSlots(state)
     return slots == 1 and "1 hueco" or string.format("%d huecos", slots)

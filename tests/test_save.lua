@@ -93,7 +93,7 @@ return function(t)
   t.test("el prestigio conserva Dinodex, pity y registro", function()
     local now = 1800000000
     local s = state.new(999, now)
-    hatchMany(s, now, 20)
+    hatchMany(s, now, config.prestige.minHatches)
     local dexTotal = s.dinodex.total
     local logCount = #s.log
     local pity = {

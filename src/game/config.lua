@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "2.2.0"
+config.version = "2.3.0"
 config.saveVersion = 1
 
 config.window = {
@@ -15,13 +15,16 @@ config.window = {
 }
 
 config.time = {
-  eggInterval = 20,          -- segundos entre huevos del nido (nivel 0)
   incubateTime = 30,         -- segundos de incubación (nivel 0)
   crossTime = 45,            -- segundos que tarda un cruce
   nestCapacity = 6,          -- huevos sin incubar (nivel 0)
   adultTime = 45,            -- segundos hasta la edad adulta
   offlineCap = 8 * 3600,     -- tope de progreso offline
   autosave = 10,             -- segundos entre autoguardados
+  layFertilityReduction = 0.03,
+  layJitter = 0.10,
+  layMin = 30,
+  colonyLayPenalty = 0.30,
   revealDuration = 2.35,     -- animación de apertura completa (se puede saltar)
   revealResult = 2.00,       -- momento en que aparece el resultado
   revealBurst = 1.35,        -- rotura de la cáscara y salida del dinosaurio
@@ -36,7 +39,7 @@ config.time = {
 }
 
 config.starting = {
-  amber = 25,
+  amber = 40,
   essence = 0,
   eggs = 1,
   incubatorSlots = 1,
@@ -68,36 +71,41 @@ config.rarity = {
     name = "Común",
     color = { 0.76, 0.80, 0.68 },
     essence = 1,
-    amberPerSec = 0.12,
+    amberPerSec = 0.06,
     legacy = 1,
+    layMultiplier = 1.00,
   },
   uncommon = {
     name = "Poco común",
     color = { 0.42, 0.84, 0.44 },
     essence = 2,
-    amberPerSec = 0.28,
+    amberPerSec = 0.14,
     legacy = 2,
+    layMultiplier = 0.92,
   },
   rare = {
     name = "Raro",
     color = { 0.35, 0.66, 1.00 },
     essence = 4,
-    amberPerSec = 0.65,
+    amberPerSec = 0.325,
     legacy = 4,
+    layMultiplier = 0.84,
   },
   epic = {
     name = "Épico",
     color = { 0.82, 0.46, 0.98 },
     essence = 9,
-    amberPerSec = 1.50,
+    amberPerSec = 0.75,
     legacy = 8,
+    layMultiplier = 0.74,
   },
   legendary = {
     name = "Legendario",
     color = { 1.00, 0.74, 0.20 },
     essence = 22,
-    amberPerSec = 4.00,
+    amberPerSec = 2.00,
     legacy = 16,
+    layMultiplier = 0.62,
   },
 }
 
@@ -116,36 +124,42 @@ config.species = {
     short = "Triceratops",
     desc = "Herbívoro robusto, con gola ósea y tres cuernos.",
     bodyScale = 1.05,
+    layTime = 600,
   },
   velociraptor = {
     name = "Velociraptor",
     short = "Velociraptor",
     desc = "Cazador ligero, plumado y de cola larga.",
     bodyScale = 1.0,
+    layTime = 480,
   },
   parasaurolophus = {
     name = "Parasaurolophus",
     short = "Parasaurolophus",
     desc = "Pico de pato y cresta tubular hacia atrás.",
     bodyScale = 1.0,
+    layTime = 540,
   },
   pteranodon = {
     name = "Pteranodon",
     short = "Pteranodon",
     desc = "Alas enormes, cresta ósea y pico afilado.",
     bodyScale = 0.96,
+    layTime = 510,
   },
   stegosaurus = {
     name = "Stegosaurus",
     short = "Stegosaurus",
     desc = "Placas alternas en el lomo y cola con púas.",
     bodyScale = 1.02,
+    layTime = 660,
   },
   ankylosaurus = {
     name = "Ankylosaurus",
     short = "Ankylosaurus",
     desc = "Coraza de placas y una maza al final de la cola.",
     bodyScale = 1.04,
+    layTime = 720,
   },
 }
 
@@ -401,22 +415,22 @@ config.upgradesOrder = {
 
 config.upgrades = {
   generator = {
-    name = "Ritmo del nido",
-    desc = "Reduce un 12 % el tiempo entre huevos.",
+    name = "Ritmo de puesta",
+    desc = "Reduce un 10 % el tiempo de puesta de cada adulto.",
     currency = "amber",
     baseCost = 35,
-    growth = 1.70,
+    growth = 2.00,
     max = 12,
-    kind = "interval",
-    factor = 0.88,
-    min = 5,
+    kind = "lay",
+    factor = 0.90,
+    min = 30,
   },
   incubators = {
     name = "Hueco de incubadora",
     desc = "Añade un hueco de incubación, hasta 4.",
     currency = "amber",
     baseCost = 90,
-    growth = 2.60,
+    growth = 2.80,
     max = 3,
     kind = "slots",
   },
@@ -425,7 +439,7 @@ config.upgrades = {
     desc = "Reduce un 14 % el tiempo de incubación.",
     currency = "amber",
     baseCost = 55,
-    growth = 1.65,
+    growth = 2.00,
     max = 12,
     kind = "interval",
     factor = 0.86,
@@ -436,7 +450,7 @@ config.upgrades = {
     desc = "Añade 2 huecos al nido.",
     currency = "essence",
     baseCost = 6,
-    growth = 1.85,
+    growth = 2.10,
     max = 8,
     kind = "capacity",
     plus = 2,
@@ -446,7 +460,7 @@ config.upgrades = {
     desc = "Aumenta un 6 % el peso de Raro o superior.",
     currency = "essence",
     baseCost = 12,
-    growth = 2.00,
+    growth = 2.20,
     max = 10,
     kind = "luck",
     perLevel = 0.06,
@@ -456,7 +470,7 @@ config.upgrades = {
     desc = "Aumenta un 15 % la producción de ámbar.",
     currency = "amber",
     baseCost = 70,
-    growth = 1.65,
+    growth = 2.00,
     max = 15,
     kind = "production",
     perLevel = 0.15,
@@ -464,7 +478,7 @@ config.upgrades = {
 }
 
 config.prestige = {
-  minHatches = 15,
+  minHatches = 120,
   maxFounders = 3,
   completionBonus = 100,
   legacyMultiplier = 0.02,

@@ -120,7 +120,7 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 
 ## Cómo se juega
 
-1. El nido genera huevos automáticamente. Haz clic en un huevo para incubarlo.
+1. Empiezas con un huevo. Los adultos ponen huevos a su propio ritmo; una colonia grande alarga la puesta de todos. Haz clic en un huevo para incubarlo.
 2. Cuando termina la incubación, pulsa **ABRIR HUEVOS** en el Nido. La animación no se abre sola. **TODOS** abre la cola pendiente en cadena.
 3. Al abrirlo nace un dinosaurio. Los adultos producen ámbar de forma pasiva.
 4. Asigna roles y hábitats desde la ficha del ejemplar. En la pradera, las pestañas **TODOS / BOSQUE / VOLCÁN / COSTA** cambian el fondo y muestran solo los residentes de cada hábitat. **HÁBITATS** abre el panel de residentes y decoración.
@@ -128,7 +128,11 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 6. Compra mejoras con ámbar y esencia: ritmo del nido, incubadoras, incubación, capacidad, suerte y producción.
 7. Cruza dos adultos de la misma especie. El simulador muestra la distribución exacta de los genes visibles antes de confirmar.
 8. Completa combinaciones en el Dinodex: patrón, color primario, cresta y mutación.
-9. Cuando quieras, haz la Gran Migración: reinicia la colonia, conserva hasta 3 fundadores y gana puntos de legado. Gástalos en el **Árbol de legado** de Ajustes.
+9. Cuando quieras, haz la Gran Migración: pide **120 huevos abiertos**, reinicia la colonia, conserva hasta 3 fundadores y gana puntos de legado. Gástalos en el **Árbol de legado** de Ajustes.
+
+## Ritmo de partida
+
+La economía está pensada para una sesión activa de **4–5 horas**. La primera Gran Migración pide 120 huevos abiertos y ronda las 4 horas en una partida eficiente; las siguientes son más rápidas por el legado. Cada adulto tiene un intervalo de puesta distinto y la colonia suma un 30 % de tiempo por adulto adicional: crecer acelera la producción de ámbar, pero retrasa los huevos. Los costes de mejora y las tasas de ámbar están ajustados a ese ritmo.
 
 ## Transparencia
 
@@ -136,6 +140,7 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 - Las barras de pity están siempre visibles. No se reinician con el prestigio.
 - El **Registro** guarda fecha, origen, rareza, especie, genes, mutación, garantías, semilla y rango de tiradas de cada apertura. Compara las tasas reales del nido con las teóricas.
 - La apertura no usa destellos que insinúen rarezas falsas. La cáscara se agrieta poco a poco durante 2,35 segundos, se abre en dos mitades y el dinosaurio sale con un efecto de sonido. El botón **CLIC PARA SALTAR** queda centrado y también responde a `Esc` o `Espacio`; el modo tranquilo la desactiva.
+- Cada adulto tiene su propio intervalo de puesta según especie, rareza, fertilidad y un margen determinista. La presión de colonia suma un 30 % de tiempo por adulto adicional: mantener muchos ejemplares acelera la producción, pero retrasa los huevos.
 - No hay anuncios, compras, moneda real, urgencia artificial ni falsos “casi lo consigues”. El modo tranquilo desactiva animaciones y el tope diario es opcional.
 
 ## Ajustar `config.lua`
@@ -143,8 +148,9 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 Casi todo el balance vive en `src/game/config.lua`:
 
 - `rates.rarity`, `rates.pity` y `rates.mutationChance`: probabilidades y garantías.
-- `time`: intervalos, incubación, cruce, capacidad y tope offline.
+- `time`: incubación, cruce, capacidad, puesta por adulto, penalización de colonia y tope offline.
 - `starting`: ámbar, esencia, huevos y huecos iniciales.
+- `rates` y `upgrades`: producción de ámbar y crecimiento de costes pensados para una sesión de 4–5 h.
 - `species`, `patterns`, `colors`, `secondaryColors`, `crests`, `mutations`: contenido y paletas.
 - `roles` y `habitats`: efectos de rol, capacidad y decoraciones de cada bioma.
 - `prestigeTree`: nodos, costes, requisitos y efectos permanentes.
@@ -171,7 +177,7 @@ La especificación no fijaba estos detalles; se resolvieron así:
 6. **Tope diario**: limita los huevos que genera el nido, no los huevos de cruce.
 7. **Progreso offline**: el tope de 8 horas se aplica al ámbar y a los huevos del nido. Las incubadoras y los cruces ya iniciados terminan; sus resultados se muestran al volver.
 8. **Huevo inicial**: la partida nueva empieza con un huevo y una incubadora. Tras la Gran Migración también se entrega un huevo para arrancar.
-9. **Requisito de prestigio**: 15 huevos abiertos desde la última migración, sin aperturas pendientes y sin cruce en curso. Los fundadores se eligen entre los ejemplares actuales.
+9. **Requisito de prestigio**: 120 huevos abiertos desde la última migración, sin aperturas pendientes y sin cruce en curso. Los fundadores se eligen entre los ejemplares actuales.
 10. **Cruces**: no se pueden cancelar. Los padres quedan ocupados hasta terminar. Si el nido está lleno, el huevo de cruce espera y tiene prioridad sobre el siguiente huevo del nido.
 11. **Registro**: conserva las últimas 2.000 aperturas; las estadísticas comparativas son de toda la partida. Se guardan semilla y contador para auditar.
 12. **Mutaciones**: las cinco son equiprobables; la probabilidad total es `mutationChance` y cada una recibe una quinta parte.
@@ -189,6 +195,8 @@ La especificación no fijaba estos detalles; se resolvieron así:
 24. **Favoritos y duplicados**: un favorito no se puede liberar hasta quitar la marca. La liberación masiva solo elimina copias repetidas no favoritas y nunca toca cruces ni huevos pendientes.
 25. **Copias de seguridad**: `save-backup.json` vive en la carpeta de guardado de LÖVE. Restaurar valida el JSON, sobrescribe la partida y reinicia el juego.
 26. **Accesibilidad**: el modo daltónico cambia la paleta de rarezas; el texto grande sube un punto las etiquetas de hasta 12 px. La escala de ventana se limita al tamaño del escritorio.
+27. **Puesta**: cada adulto acumula su propio temporizador. La primera puesta llega tras su intervalo; si el nido está lleno, el temporizador se queda preparado. Los huevos de cruce no usan este temporizador.
+28. **Duración de partida**: la primera Gran Migración pide 120 huevos abiertos y está pensada para rondar 4–5 h de juego activo. Las migraciones siguientes son más rápidas por el legado y los puntos del árbol.
 
 ## Empaquetar un `.love`
 

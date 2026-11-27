@@ -256,8 +256,10 @@ local function drawDetail(app, dino, x, y, w, h, now)
   end
   theme.setFont(9)
   theme.setColor(adult and theme.colors.green or theme.colors.muted, 1)
-  love.graphics.printf(adult and "Adulto" or ("Creciendo: " .. theme.fmtTime((dino.adultAt or now) - now)),
-    x + 10, y + 180, w - 20, "center")
+  local adultStatus = adult
+    and ("Adulto · huevo cada " .. theme.fmtTime(economy.layInterval(dino, app.game)))
+    or ("Creciendo: " .. theme.fmtTime((dino.adultAt or now) - now))
+  love.graphics.printf(adultStatus, x + 10, y + 180, w - 20, "center")
 
   local rowY = y + 200
   local rows = {
