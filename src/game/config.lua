@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "1.10.1"
+config.version = "2.0.0"
 config.saveVersion = 1
 
 config.window = {
@@ -237,6 +237,156 @@ config.functional = {
     name = "Suerte",
     short = "SUE",
     desc = "+1 % de mejora de rareza en cruces por punto.",
+  },
+}
+
+config.roleOrder = { "recolector", "incubador", "explorador" }
+config.roles = {
+  recolector = {
+    name = "Recolector",
+    short = "REC",
+    desc = "+25 % de ámbar propio.",
+    productionBonus = 0.25,
+  },
+  incubador = {
+    name = "Incubador",
+    short = "INC",
+    desc = "-2 % de incubación por adulto, hasta -10 %.",
+    incubationPerDino = 0.02,
+    incubationCap = 0.10,
+  },
+  explorador = {
+    name = "Explorador",
+    short = "EXP",
+    desc = "+1 % de peso raro+ por adulto, hasta +10 %.",
+    luckPerDino = 0.01,
+    luckCap = 0.10,
+  },
+}
+
+config.habitatOrder = { "bosque", "volcan", "costa" }
+config.habitats = {
+  bosque = {
+    name = "Bosque de helechos",
+    short = "Bosque",
+    desc = "+15 % de producción a sus residentes.",
+    capacity = 3,
+    color = { 0.28, 0.58, 0.32 },
+    productionBonus = 0.15,
+    decor = {
+      key = "sendero",
+      name = "Sendero de piedra",
+      desc = "+10 % de producción a los residentes.",
+      currency = "amber",
+      cost = 90,
+      productionBonus = 0.10,
+    },
+  },
+  volcan = {
+    name = "Caldera de obsidiana",
+    short = "Volcán",
+    desc = "+1 % de peso raro+ por residente, hasta +3 %.",
+    capacity = 3,
+    color = { 0.58, 0.26, 0.22 },
+    luckPerResident = 0.01,
+    luckCap = 0.03,
+    decor = {
+      key = "mirador",
+      name = "Mirador de obsidiana",
+      desc = "+1 % de peso raro+ global.",
+      currency = "essence",
+      cost = 8,
+      luckBonus = 0.01,
+    },
+  },
+  costa = {
+    name = "Costa de ámbar",
+    short = "Costa",
+    desc = "-2 % de incubación por residente, hasta -6 %.",
+    capacity = 3,
+    color = { 0.25, 0.48, 0.62 },
+    incubationPerResident = 0.02,
+    incubationCap = 0.06,
+    decor = {
+      key = "termas",
+      name = "Termas minerales",
+      desc = "-2 % de incubación global.",
+      currency = "amber",
+      cost = 120,
+      incubationBonus = 0.02,
+    },
+  },
+}
+
+config.prestigeTreeOrder = { "nido", "produccion", "suerte", "capacidad", "incubacion", "legado" }
+config.prestigeTree = {
+  nido = {
+    name = "Vivero extra",
+    desc = "Empiezas cada migración con una incubadora extra.",
+    max = 1,
+    baseCost = 20,
+    costStep = 0,
+    effect = "incubators",
+    row = 1,
+    col = 1,
+  },
+  produccion = {
+    name = "Dieta ancestral",
+    desc = "+5 % de producción por nivel.",
+    max = 5,
+    baseCost = 20,
+    costStep = 10,
+    effect = "production",
+    perLevel = 0.05,
+    row = 1,
+    col = 2,
+  },
+  suerte = {
+    name = "Instinto de manada",
+    desc = "+1 % de peso raro+ por nivel.",
+    max = 5,
+    baseCost = 20,
+    costStep = 10,
+    effect = "luck",
+    perLevel = 0.01,
+    row = 1,
+    col = 3,
+  },
+  capacidad = {
+    name = "Nido amplio",
+    desc = "+1 hueco de nido por nivel.",
+    max = 3,
+    baseCost = 25,
+    costStep = 15,
+    effect = "capacity",
+    perLevel = 1,
+    row = 2,
+    col = 1,
+    requires = { key = "nido", level = 1 },
+  },
+  incubacion = {
+    name = "Calor heredado",
+    desc = "-3 % de incubación por nivel.",
+    max = 5,
+    baseCost = 25,
+    costStep = 15,
+    effect = "incubation",
+    perLevel = 0.03,
+    row = 2,
+    col = 2,
+    requires = { key = "produccion", level = 1 },
+  },
+  legado = {
+    name = "Memoria de la colonia",
+    desc = "+10 % de puntos de legado por nivel.",
+    max = 3,
+    baseCost = 30,
+    costStep = 20,
+    effect = "legacy",
+    perLevel = 0.10,
+    row = 2,
+    col = 3,
+    requires = { key = "suerte", level = 1 },
   },
 }
 

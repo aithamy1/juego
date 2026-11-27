@@ -3,6 +3,14 @@ local config = require("src.game.config")
 
 local economy = {}
 
+local function treeLevel(state, key)
+  return (state.prestige and state.prestige.tree and state.prestige.tree[key]) or 0
+end
+
+local function hasDecoration(state, key)
+  return state.habitats and state.habitats[key] and state.habitats[key].decor
+end
+
 function economy.eggInterval(state)
   local level = (state.upgrades and state.upgrades.generator) or 0
   local def = config.upgrades.generator
@@ -12,17 +20,40 @@ end
 function economy.incubateTime(state)
   local level = (state.upgrades and state.upgrades.incubation) or 0
   local def = config.upgrades.incubation
-  return math.max(def.min, config.time.incubateTime * (def.factor ^ level))
+  local base = math.max(def.min, config.time.incubateTime * (def.factor ^ level))
+  local now = state.lastTick or os.time()
+  local incubators = 0
+  local costa = 0
+  for _, dino in ipairs(state.dinos or {}) do
+    if economy.isAdult(dino, now) then
+      if dino.role == "incubador" then
+        incubators = incubators + 1
+      end
+      if dino.habitat == "costa" then
+        costa = costa + 1
+      end
+    end
+  end
+  local reduction = math.min(config.roles.incubador.incubationCap,
+      incubators * config.roles.incubador.incubationPerDino)
+    + math.min(config.habitats.costa.incubationCap,
+      costa * config.habitats.costa.incubationPerResident)
+    + (hasDecoration(state, "costa") and config.habitats.costa.decor.incubationBonus or 0)
+    + treeLevel(state, "incubacion") * config.prestigeTree.incubacion.perLevel
+  return math.max(3, base * (1 - math.min(0.55, reduction)))
 end
 
 function economy.incubatorSlots(state)
-  return config.starting.incubatorSlots
+  local slots = config.starting.incubatorSlots
     + ((state.upgrades and state.upgrades.incubators) or 0)
+    + treeLevel(state, "nido")
+  return math.min(4, slots)
 end
 
 function economy.nestCapacity(state)
   return config.time.nestCapacity
     + ((state.upgrades and state.upgrades.capacity) or 0) * config.upgrades.capacity.plus
+    + treeLevel(state, "capacidad") * config.prestigeTree.capacidad.perLevel
 end
 
 function economy.milestoneCount(state)
@@ -36,6 +67,7 @@ function economy.productionMultiplier(state)
   return (1 + config.upgrades.production.perLevel * prodLevel)
     * (1 + config.dinodex.milestoneBonus * milestones)
     * (1 + config.prestige.legacyMultiplier * legacy)
+    * (1 + treeLevel(state, "produccion") * config.prestigeTree.produccion.perLevel)
 end
 
 function economy.dinoAdultTime(dino)
@@ -55,10 +87,42 @@ function economy.dinoRate(dino, state)
   if dino.mutation and config.mutations[dino.mutation] then
     mutationMult = config.mutations[dino.mutation].production
   end
-  return rarity.amberPerSec
+  local rate = rarity.amberPerSec
     * (1 + 0.12 * productivity)
     * mutationMult
-    * economy.productionMultiplier(state)
+  if dino.role == "recolector" then
+    rate = rate * (1 + config.roles.recolector.productionBonus)
+  end
+  if dino.habitat == "bosque" then
+    local bonus = config.habitats.bosque.productionBonus
+    if hasDecoration(state, "bosque") then
+      bonus = bonus + config.habitats.bosque.decor.productionBonus
+    end
+    rate = rate * (1 + bonus)
+  end
+  return rate * economy.productionMultiplier(state)
+end
+
+function economy.roleCount(state, role)
+  local now = state.lastTick or os.time()
+  local count = 0
+  for _, dino in ipairs(state.dinos or {}) do
+    if dino.role == role and economy.isAdult(dino, now) then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+function economy.habitatCount(state, key)
+  local now = state.lastTick or os.time()
+  local count = 0
+  for _, dino in ipairs(state.dinos or {}) do
+    if dino.habitat == key and economy.isAdult(dino, now) then
+      count = count + 1
+    end
+  end
+  return count
 end
 
 function economy.totalProduction(state, now)

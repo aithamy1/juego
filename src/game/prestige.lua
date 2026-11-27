@@ -20,7 +20,47 @@ function prestige.gain(state)
     fromDinos = fromDinos + rarity.legacy
   end
   local fromDex = math.floor(prestige.completion(state) * config.prestige.completionBonus)
+  local tree = (state.prestige and state.prestige.tree and state.prestige.tree.legado) or 0
+  local multiplier = 1 + tree * config.prestigeTree.legado.perLevel
+  fromDinos = math.floor(fromDinos * multiplier)
+  fromDex = math.floor(fromDex * multiplier)
   return fromDinos + fromDex, fromDinos, fromDex
+end
+
+function prestige.nodeCost(key, level)
+  local def = config.prestigeTree[key]
+  if not def then
+    return nil
+  end
+  return def.baseCost + def.costStep * (level or 0)
+end
+
+function prestige.treeLevel(state, key)
+  return (state.prestige and state.prestige.tree and state.prestige.tree[key]) or 0
+end
+
+function prestige.canBuyNode(state, key)
+  local def = config.prestigeTree[key]
+  if not def then
+    return false, "Nodo no válido."
+  end
+  local level = prestige.treeLevel(state, key)
+  if level >= def.max then
+    return false, "Nivel máximo."
+  end
+  if def.requires then
+    local required = prestige.treeLevel(state, def.requires.key)
+    if required < def.requires.level then
+      return false, "Requiere " .. config.prestigeTree[def.requires.key].name
+        .. " nivel " .. def.requires.level .. "."
+    end
+  end
+  local points = (state.prestige and state.prestige.points) or 0
+  local cost = prestige.nodeCost(key, level)
+  if points < cost then
+    return false, "Faltan " .. (cost - points) .. " puntos de legado."
+  end
+  return true
 end
 
 function prestige.multiplier(state)
@@ -65,7 +105,8 @@ function prestige.apply(state, founderIds, now)
   state.essence = 0
   state.eggs = {}
   state.incubators = {}
-  for i = 1, config.starting.incubatorSlots do
+  local slots = math.min(4, config.starting.incubatorSlots + ((state.prestige.tree and state.prestige.tree.nido) or 0))
+  for i = 1, slots do
     state.incubators[i] = false
   end
   state.cross = nil
@@ -76,6 +117,7 @@ function prestige.apply(state, founderIds, now)
 
   state.prestige.count = (state.prestige.count or 0) + 1
   state.prestige.totalLegacy = (state.prestige.totalLegacy or 0) + gain
+  state.prestige.points = (state.prestige.points or 0) + gain
   state.prestige.lastGain = gain
   state.prestige.lastAt = now
   state.prestige.baselineHatches = state.stats.hatched or 0

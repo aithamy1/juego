@@ -146,7 +146,7 @@ function settings.draw(app)
 
   theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("PUNTOS DE LEGADO", rx + 12, y + 56)
+  love.graphics.print("LEGADO TOTAL", rx + 12, y + 56)
   love.graphics.print("MULTIPLICADOR", rx + 190, y + 56)
   theme.setFont(22)
   theme.setColor(theme.colors.purple, 1)
@@ -200,6 +200,14 @@ function settings.draw(app)
   love.graphics.printf("Se activa tras abrir " .. config.prestige.minHatches
     .. " huevos desde la última migración y resolver los resultados.",
     rx + 12, y + 394, 338, "center")
+  widgets.button(app, rx + 12, y + 420, 338, 30, "ÁRBOL DE LEGADO · " .. theme.fmtInt(game.prestige.points or 0) .. " pts", {
+    style = "secondary",
+    font = 8,
+    tooltip = "Gasta puntos de legado en mejoras permanentes.",
+    onClick = function()
+      app:openModal("prestige_tree", {})
+    end,
+  })
 
   theme.setFont(8)
   theme.setColor(theme.colors.ink, 1)

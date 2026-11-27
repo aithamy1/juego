@@ -60,7 +60,7 @@ local function drawHelp(app, modal)
   love.graphics.print("El bucle", x + 28, y + 94)
   theme.setFont(11)
   theme.setColor(theme.colors.textDim, 1)
-  love.graphics.printf("El nido produce huevos. Los incubas y, cuando termina la incubación, pulsas ABRIR HUEVOS para abrirlos. Nacen dinosaurios y los adultos generan ámbar de forma pasiva. Con ámbar compras mejoras; con esencia (al liberar ejemplares) amplías el nido y mejoras la suerte. Los cruces heredan genes con proporciones mendelianas y el Dinodex registra cada combinación nueva. Cuando quieras, la Gran Migración reinicia la colonia a cambio de legado permanente.",
+  love.graphics.printf("El nido produce huevos. Los incubas y, cuando termina la incubación, pulsas ABRIR HUEVOS para abrirlos. Nacen dinosaurios y los adultos generan ámbar de forma pasiva. Con ámbar compras mejoras; con esencia (al liberar ejemplares) amplías el nido y mejoras la suerte. Los cruces heredan genes con proporciones mendelianas y el Dinodex registra cada combinación nueva. En el Criadero asignas rol y hábitat; en la pradera abres Hábitats para decorar. Los puntos de la migración se gastan en el Árbol de legado de Ajustes.",
     x + 28, y + 118, 784, "left")
 
   theme.setFont(13)
@@ -687,7 +687,7 @@ local function drawPrestige(app, modal)
   love.graphics.print("Por ejemplares: " .. fromDinos .. " · por Dinodex: " .. fromDex, x + 28, y + 130)
   theme.setFont(10)
   theme.setColor(theme.colors.textDim, 1)
-  love.graphics.printf("Se conservan también: semilla, ajustes y multiplicador de legado. Se reinician ámbar, esencia, mejoras, huevos e incubadoras.",
+  love.graphics.printf("Se conservan también: semilla, ajustes, árbol de legado, decoraciones y multiplicador. Se reinician ámbar, esencia, mejoras, huevos e incubadoras.",
     x + 28, y + 154, 300, "left")
   theme.setFont(9)
   theme.setColor(theme.colors.red, 1)
@@ -811,6 +811,325 @@ local function drawPrestige(app, modal)
   })
 end
 
+local function drawHabitatScene(key, x, y, w, h, decorated)
+  local previous = { love.graphics.getScissor() }
+  love.graphics.setScissor(x, y, w, h)
+  love.graphics.setColor(0.05, 0.09, 0.08, 1)
+  love.graphics.rectangle("fill", x, y, w, h)
+
+  if key == "bosque" then
+    theme.setColor({ 0.35, 0.58, 0.70 }, 1)
+    love.graphics.rectangle("fill", x, y, w, h * 0.58)
+    theme.setColor({ 0.25, 0.48, 0.30 }, 1)
+    love.graphics.ellipse("fill", x + w * 0.25, y + h * 0.55, w * 0.32, h * 0.25)
+    love.graphics.ellipse("fill", x + w * 0.78, y + h * 0.58, w * 0.30, h * 0.22)
+    theme.setColor({ 0.23, 0.48, 0.24 }, 1)
+    love.graphics.rectangle("fill", x, y + h * 0.50, w, h * 0.50)
+    for i = 0, 3 do
+      local tx = x + 22 + i * (w - 44) / 3
+      theme.setColor({ 0.42, 0.29, 0.17 }, 1)
+      love.graphics.rectangle("fill", tx, y + h * 0.38, 4, h * 0.30)
+      theme.setColor(i % 2 == 0 and { 0.20, 0.46, 0.24 } or { 0.28, 0.55, 0.29 }, 1)
+      love.graphics.circle("fill", tx + 2, y + h * 0.34, 12)
+      love.graphics.circle("fill", tx - 6, y + h * 0.37, 8)
+    end
+    if decorated then
+      theme.setColor({ 0.61, 0.58, 0.48 }, 1)
+      for i = 0, 4 do
+        love.graphics.rectangle("fill", x + 18 + i * 28, y + h - 13 - (i % 2) * 2, 18, 5)
+      end
+    end
+  elseif key == "volcan" then
+    theme.setColor({ 0.18, 0.12, 0.18 }, 1)
+    love.graphics.rectangle("fill", x, y, w, h)
+    theme.setColor({ 0.34, 0.15, 0.14 }, 1)
+    love.graphics.polygon("fill", x + w * 0.18, y + h, x + w * 0.50, y + h * 0.20, x + w * 0.82, y + h)
+    theme.setColor({ 0.09, 0.07, 0.09 }, 1)
+    love.graphics.polygon("fill", x + w * 0.42, y + h, x + w * 0.50, y + h * 0.20, x + w * 0.58, y + h)
+    theme.setColor({ 0.97, 0.45, 0.13 }, 1)
+    love.graphics.setLineWidth(2)
+    love.graphics.line(x + w * 0.50, y + h * 0.22, x + w * 0.47, y + h * 0.42, x + w * 0.54, y + h * 0.55,
+      x + w * 0.49, y + h * 0.75)
+    love.graphics.setLineWidth(1)
+    theme.setColor({ 0.72, 0.70, 0.72 }, 0.45)
+    love.graphics.circle("fill", x + w * 0.50, y + h * 0.16, 5)
+    love.graphics.circle("fill", x + w * 0.56, y + h * 0.10, 4)
+    if decorated then
+      theme.setColor({ 0.12, 0.10, 0.14 }, 1)
+      love.graphics.rectangle("fill", x + w - 45, y + h - 48, 16, 40)
+      love.graphics.rectangle("fill", x + w - 53, y + h - 54, 32, 8)
+      theme.setColor(theme.colors.gold, 1)
+      love.graphics.rectangle("fill", x + w - 48, y + h - 60, 22, 6)
+    end
+  else
+    theme.setColor({ 0.45, 0.70, 0.82 }, 1)
+    love.graphics.rectangle("fill", x, y, w, h * 0.45)
+    theme.setColor(theme.colors.goldLight, 1)
+    love.graphics.circle("fill", x + w - 36, y + 18, 9)
+    theme.setColor({ 0.20, 0.48, 0.64 }, 1)
+    love.graphics.rectangle("fill", x, y + h * 0.42, w, h * 0.35)
+    theme.setColor({ 0.85, 0.75, 0.52 }, 1)
+    love.graphics.rectangle("fill", x, y + h * 0.74, w, h * 0.26)
+    theme.setColor({ 0.93, 0.92, 0.82 }, 0.45)
+    love.graphics.setLineWidth(2)
+    love.graphics.line(x + 12, y + h * 0.56, x + 40, y + h * 0.56)
+    love.graphics.line(x + 58, y + h * 0.62, x + 82, y + h * 0.62)
+    love.graphics.setLineWidth(1)
+    if decorated then
+      theme.setColor({ 0.26, 0.30, 0.30 }, 1)
+      love.graphics.ellipse("fill", x + w - 56, y + h - 18, 28, 10)
+      theme.setColor({ 0.42, 0.75, 0.76 }, 0.75)
+      love.graphics.ellipse("fill", x + w - 56, y + h - 19, 20, 6)
+      theme.setColor({ 0.85, 0.95, 0.95 }, 0.45)
+      love.graphics.circle("fill", x + w - 62, y + h - 40, 5)
+      love.graphics.circle("fill", x + w - 48, y + h - 48, 4)
+    end
+  end
+
+  theme.setColor(theme.colors.black, 0.25)
+  love.graphics.setLineWidth(1)
+  love.graphics.rectangle("line", x + 0.5, y + 0.5, w - 1, h - 1)
+  love.graphics.setScissor(previous[1], previous[2], previous[3], previous[4])
+end
+
+local function adultHabitatResidents(game, key, now)
+  local count = 0
+  for _, dino in ipairs(stateModule.habitatResidents(game, key)) do
+    if economy.isAdult(dino, now) then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+local function habitatBonusText(key, game, now)
+  local def = config.habitats[key]
+  local decorated = game.habitats[key] and game.habitats[key].decor
+  local count = adultHabitatResidents(game, key, now)
+  if key == "bosque" then
+    local bonus = def.productionBonus + (decorated and def.decor.productionBonus or 0)
+    return "Producción de residentes: +" .. theme.fmtPct(bonus, 0)
+  elseif key == "volcan" then
+    local bonus = math.min(def.luckCap, count * def.luckPerResident)
+      + (decorated and def.decor.luckBonus or 0)
+    return "Peso raro+: +" .. theme.fmtPct(bonus, 0) .. " · " .. count .. " adulto" .. (count == 1 and "" or "s")
+  end
+  local reduction = math.min(def.incubationCap, count * def.incubationPerResident)
+    + (decorated and def.decor.incubationBonus or 0)
+  return "Incubación: -" .. theme.fmtPct(reduction, 0) .. " · " .. count .. " adulto" .. (count == 1 and "" or "s")
+end
+
+local function drawHabitatCard(app, key, x, y)
+  local game = app.game
+  local def = config.habitats[key]
+  local residents = stateModule.habitatResidents(game, key)
+  local cardW, cardH = 320, 440
+  theme.panel(x, y, cardW, cardH, {
+    color = theme.colors.panel2,
+    borderColor = def.color,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.setFont(14)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print(def.name, x + 12, y + 10)
+  theme.setFont(8)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf(#residents .. " / " .. def.capacity, x + cardW - 96, y + 14, 84, "right")
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf(def.desc, x + 12, y + 32, cardW - 24, "left")
+
+  drawHabitatScene(key, x + 12, y + 60, cardW - 24, 64, game.habitats[key].decor)
+
+  theme.setFont(8)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("RESIDENTES", x + 12, y + 136)
+  local rowY = y + 152
+  for index = 1, def.capacity do
+    local dino = residents[index]
+    if dino then
+      theme.panel(x + 12, rowY, cardW - 24, 28, {
+        color = theme.colors.panel,
+        borderColor = theme.colors.borderSoft,
+        shadow = false,
+        borderWidth = 1,
+      })
+      theme.setFont(9)
+      theme.setColor(theme.colors.text, 1)
+      love.graphics.print(config.species[dino.species].name, x + 20, rowY + 3)
+      local role = dino.role and config.roles[dino.role].short or "—"
+      local status
+      if economy.isAdult(dino, app.now) then
+        status = role .. " · +" .. theme.fmtRate(economy.dinoRate(dino, game)) .. "/s"
+      else
+        status = role .. " · creciendo"
+      end
+      theme.setFont(7)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.print(status, x + 20, rowY + 16)
+      widgets.button(app, x + cardW - 42, rowY + 4, 22, 20, "X", {
+        style = "ghost",
+        font = 7,
+        tooltip = "Quitar este ejemplar del hábitat.",
+        onClick = function()
+          stateModule.setDinoHabitat(game, dino.id, "ninguno")
+          app:toast("Ejemplar retirado del hábitat.", theme.colors.gold)
+        end,
+      })
+    else
+      theme.setFont(8)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.print("Hueco libre", x + 20, rowY + 8)
+      theme.setFont(7)
+      theme.setColor(theme.colors.textDim, 0.8)
+      love.graphics.print("Asigna desde la ficha del Criadero.", x + 100, rowY + 9)
+    end
+    rowY = rowY + 32
+  end
+
+  theme.setFont(8)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("BONO ACTUAL", x + 12, y + 258)
+  theme.setFont(8)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf(habitatBonusText(key, game, app.now), x + 12, y + 272, cardW - 24, "left")
+
+  local dy = y + 300
+  theme.panel(x + 12, dy, cardW - 24, 120, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.borderSoft,
+    shadow = false,
+    borderWidth = 1,
+  })
+  theme.setFont(8)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("DECORACIÓN", x + 22, dy + 8)
+  theme.setFont(10)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(def.decor.name, x + 22, dy + 25)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf(def.decor.desc, x + 22, dy + 43, cardW - 44, "left")
+  if game.habitats[key].decor then
+    theme.setFont(9)
+    theme.setColor(theme.colors.green, 1)
+    love.graphics.print("ACTIVA", x + 22, dy + 88)
+  else
+    local currency = def.decor.currency == "amber" and "ámbar" or "esencia"
+    local affordable = (game[def.decor.currency] or 0) >= def.decor.cost
+    widgets.button(app, x + 22, dy + 82, cardW - 44, 28,
+      "DECORAR · " .. def.decor.cost .. " " .. currency, {
+        style = affordable and "primary" or "secondary",
+        font = 8,
+        disabled = not affordable,
+        tooltip = affordable and "Comprar y activar esta decoración permanentemente."
+          or ("Faltan " .. currency .. "."),
+        onClick = function()
+          local ok, value = stateModule.buyDecoration(game, key)
+          if ok then
+            app:toast(def.decor.name .. " activada.", theme.colors.gold)
+          else
+            app:toast(value or "No se pudo comprar.", theme.colors.red)
+          end
+        end,
+      })
+  end
+end
+
+local function drawHabitats(app, modal)
+  local game = app.game
+  local x, y = widgets.modalFrame(app, "Hábitats y decoración",
+    "Asigna residentes desde la ficha del Criadero. Una decoración permanente por hábitat.", 1080, 620)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Ámbar " .. theme.fmtInt(game.amber) .. " · Esencia " .. theme.fmtInt(game.essence),
+    x + 760, y + 64, 290, "right")
+  for index, key in ipairs(config.habitatOrder) do
+    drawHabitatCard(app, key, x + 30 + (index - 1) * 350, y + 92)
+  end
+  closeButton(app, x + 900, y + 560, 150, 36, "Cerrar")
+end
+
+local function drawPrestigeTree(app, modal)
+  local game = app.game
+  local x, y = widgets.modalFrame(app, "Árbol de legado",
+    "Gasta puntos de legado en mejoras permanentes. Los nodos inferiores piden nivel 1 del nodo superior.", 940, 620)
+  theme.setFont(11)
+  theme.setColor(theme.colors.ink, 0.95)
+  love.graphics.printf("PUNTOS: " .. theme.fmtInt(game.prestige.points or 0), x + 600, y + 19, 312, "right")
+
+  local cardW, cardH = 280, 180
+  local colX = { x + 30, x + 330, x + 630 }
+  local rowY = { y + 120, y + 350 }
+  for _, key in ipairs(config.prestigeTreeOrder) do
+    local def = config.prestigeTree[key]
+    if def.requires then
+      local from = config.prestigeTree[def.requires.key]
+      local fromX = colX[from.col] + cardW / 2
+      local toX = colX[def.col] + cardW / 2
+      local unlocked = (game.prestige.tree[def.requires.key] or 0) >= def.requires.level
+      theme.setColor(unlocked and theme.colors.green or theme.colors.borderSoft, 0.8)
+      love.graphics.setLineWidth(2)
+      love.graphics.line(fromX, rowY[1] + cardH, fromX, rowY[1] + cardH + 20,
+        toX, rowY[2] - 20, toX, rowY[2])
+    end
+  end
+
+  for _, key in ipairs(config.prestigeTreeOrder) do
+    local def = config.prestigeTree[key]
+    local level = game.prestige.tree[key] or 0
+    local maxed = level >= def.max
+    local canBuy, reason = prestige.canBuyNode(game, key)
+    local cx = colX[def.col]
+    local cy = rowY[def.row]
+    theme.panel(cx, cy, cardW, cardH, {
+      color = level > 0 and theme.colors.panel2 or theme.colors.panel,
+      borderColor = maxed and theme.colors.green or (level > 0 and theme.colors.gold or theme.colors.border),
+      shadowSize = 3,
+      borderWidth = 2,
+    })
+    theme.setFont(13)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.print(def.name, cx + 12, cy + 10)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf("Nv " .. level .. "/" .. def.max, cx + cardW - 78, cy + 14, 66, "right")
+    theme.setFont(8)
+    theme.setColor(theme.colors.textDim, 1)
+    love.graphics.printf(def.desc, cx + 12, cy + 34, cardW - 24, "left")
+    if def.requires then
+      local required = config.prestigeTree[def.requires.key]
+      local unlocked = (game.prestige.tree[def.requires.key] or 0) >= def.requires.level
+      theme.setFont(7)
+      theme.setColor(unlocked and theme.colors.green or theme.colors.red, 1)
+      love.graphics.print("Requiere " .. required.name .. " Nv " .. def.requires.level, cx + 12, cy + 78)
+    end
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Coste", cx + 12, cy + 105)
+    theme.setFont(11)
+    theme.setColor(theme.colors.gold, 1)
+    love.graphics.print(maxed and "MÁXIMO" or (prestige.nodeCost(key, level) .. " pts"), cx + 70, cy + 101)
+    widgets.button(app, cx + 12, cy + 136, cardW - 24, 32, maxed and "MÁXIMO" or "COMPRAR", {
+      style = canBuy and "primary" or "secondary",
+      font = 9,
+      disabled = not canBuy,
+      tooltip = canBuy and ("Gastar " .. prestige.nodeCost(key, level) .. " puntos de legado.") or reason,
+      onClick = function()
+        local ok, value = stateModule.buyPrestigeNode(game, key)
+        if ok then
+          app:toast(def.name .. " · nivel " .. game.prestige.tree[key] .. " por " .. value .. " puntos.", theme.colors.purple)
+        else
+          app:toast(value or "No se pudo comprar.", theme.colors.red)
+        end
+      end,
+    })
+  end
+
+  closeButton(app, x + 760, y + 560, 150, 36, "Cerrar")
+end
+
 function modals.draw(app, modal)
   local handlers = {
     help = drawHelp,
@@ -821,6 +1140,8 @@ function modals.draw(app, modal)
     dex = drawDex,
     combos = drawCombos,
     prestige = drawPrestige,
+    habitats = drawHabitats,
+    prestige_tree = drawPrestigeTree,
   }
   local handler = handlers[modal.kind]
   if handler then

@@ -1,6 +1,6 @@
 # Criadero de Ámbar
 
-MVP de un juego incremental de cría y coleccionismo de dinosaurios hecho con **LÖVE 11.5** y **LuaJIT**. Incuba huevos, cría adultos, cruza ejemplares, completa el Dinodex y haz la Gran Migración para empezar de nuevo conservando lo permanente.
+MVP de un juego incremental de cría y coleccionismo de dinosaurios hecho con **LÖVE 11.5** y **LuaJIT**. Incuba huevos, asigna roles y hábitats, decora los biomas, cruza ejemplares, completa el Dinodex y haz la Gran Migración para empezar de nuevo conservando lo permanente.
 
 ## Requisitos
 
@@ -33,6 +33,7 @@ Los tests cubren:
 - Serialización JSON idempotente, migración y conservación de Dinodex/pity/registro en el prestigio.
 - Determinismo: misma semilla y mismas acciones producen el mismo estado.
 - Flujo de cruces, prioridad del huevo de cruce, liberación y hitos del Dinodex.
+- Roles, capacidad de hábitats, decoraciones y efectos del árbol de legado.
 
 ## Controles
 
@@ -73,6 +74,13 @@ tests/                   runner y suites con luajit
 
 La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, mejoras rápidas y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
 
+## Roles, hábitats y legado
+
+- **Roles**: cada ejemplar puede ser recolector, incubador o explorador desde su ficha. Los recolectores producen un 25 % más de ámbar propio; cada incubador adulto reduce la incubación un 2 % (máximo 10 %); cada explorador adulto sube un 1 % el peso de raro o superior (máximo 10 %).
+- **Hábitats**: el botón **HÁBITATS** de la pradera abre el panel de los tres biomas. Cada uno admite 3 residentes. Bosque da +15 % de producción a sus residentes; Volcán da +1 % de peso raro+ por residente adulto (máximo 3 %); Costa reduce la incubación un 2 % por residente adulto (máximo 6 %).
+- **Decoración**: cada hábitat tiene una decoración permanente que se compra con ámbar o esencia. Añade un bonus adicional y cambia el dibujo del bioma.
+- **Árbol de legado**: en Ajustes, el botón **ÁRBOL DE LEGADO** gasta puntos obtenidos al migrar. Tiene seis nodos permanentes: incubadora inicial, producción, suerte, capacidad del nido, incubación y puntos de legado. Los nodos inferiores piden nivel 1 del nodo superior.
+
 ## Audio
 
 Todo el sonido se genera al arrancar con `love.sound` y `love.audio`, sin archivos de audio externos:
@@ -89,13 +97,14 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 ## Cómo se juega
 
 1. El nido genera huevos automáticamente. Haz clic en un huevo para incubarlo.
-2. Cuando termina la incubación, pulsa **ABRIR HUEVOS** en el Nido. La animación no se abre sola.
+2. Cuando termina la incubación, pulsa **ABRIR HUEVOS** en el Nido. La animación no se abre sola. **TODOS** abre la cola pendiente en cadena.
 3. Al abrirlo nace un dinosaurio. Los adultos producen ámbar de forma pasiva.
-4. Libera ejemplares para obtener esencia.
-5. Compra mejoras con ámbar y esencia: ritmo del nido, incubadoras, incubación, capacidad, suerte y producción.
-6. Cruza dos adultos de la misma especie. El simulador muestra la distribución exacta de los genes visibles antes de confirmar.
-7. Completa combinaciones en el Dinodex: patrón, color primario, cresta y mutación.
-8. Cuando quieras, haz la Gran Migración: reinicia la colonia, conserva hasta 3 fundadores y gana puntos de legado permanentes.
+4. Asigna roles y hábitats desde la ficha del ejemplar. La pradera tiene un botón **HÁBITATS** para ver residentes y comprar decoración.
+5. Libera ejemplares para obtener esencia.
+6. Compra mejoras con ámbar y esencia: ritmo del nido, incubadoras, incubación, capacidad, suerte y producción.
+7. Cruza dos adultos de la misma especie. El simulador muestra la distribución exacta de los genes visibles antes de confirmar.
+8. Completa combinaciones en el Dinodex: patrón, color primario, cresta y mutación.
+9. Cuando quieras, haz la Gran Migración: reinicia la colonia, conserva hasta 3 fundadores y gana puntos de legado. Gástalos en el **Árbol de legado** de Ajustes.
 
 ## Transparencia
 
@@ -113,6 +122,8 @@ Casi todo el balance vive en `src/game/config.lua`:
 - `time`: intervalos, incubación, cruce, capacidad y tope offline.
 - `starting`: ámbar, esencia, huevos y huecos iniciales.
 - `species`, `patterns`, `colors`, `secondaryColors`, `crests`, `mutations`: contenido y paletas.
+- `roles` y `habitats`: efectos de rol, capacidad y decoraciones de cada bioma.
+- `prestigeTree`: nodos, costes, requisitos y efectos permanentes.
 - `upgrades`: coste base, crecimiento, máximo y efecto de cada mejora.
 - `prestige` y `dinodex`: requisitos, bonus y multiplicadores.
 
@@ -145,6 +156,9 @@ La especificación no fijaba estos detalles; se resolvieron así:
 17. **Pity**: la garantía sustituye la tirada en el huevo número `rareAt`, `legendaryAt` o `mutationAt` desde el último resultado correspondiente. Los contadores se reinician solo al obtener ese resultado.
 18. **Rendimiento**: la rejilla del criadero solo dibuja las tarjetas visibles. Se probó la carga y el desplazamiento con 200 ejemplares; la tasa de 60 FPS depende de la GPU (el entorno de desarrollo usa render por software y no permite validarla).
 19. **Fuente**: Pixelify Sans se incluye bajo SIL OFL para acercar la interfaz a la referencia pixel-art; no se usan imágenes externas.
+20. **Roles y hábitats**: asignar rol o hábitat es gratuito y se puede cambiar cuando quieras. Los efectos de incubador y explorador solo cuentan ejemplares adultos; el recolector mejora la producción propia. La capacidad de cada hábitat es 3 y no se amplía.
+21. **Decoración**: cada hábitat tiene una decoración permanente, se compra una vez y no se puede cambiar. Se conserva al migrar.
+22. **Árbol de legado**: los puntos disponibles son independientes del legado total y del multiplicador. Al migrar se suman a ambos; gastarlos no reduce el multiplicador permanente.
 
 ## Empaquetar un `.love`
 

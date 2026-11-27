@@ -50,6 +50,20 @@ local sortOptions = {
   { value = "nombre", label = "Especie" },
 }
 
+local roleOptions = {
+  { value = "ninguno", label = "Sin rol" },
+  { value = "recolector", label = "Recolector" },
+  { value = "incubador", label = "Incubador" },
+  { value = "explorador", label = "Explorador" },
+}
+
+local habitatOptions = {
+  { value = "ninguno", label = "Sin hábitat" },
+  { value = "bosque", label = "Bosque" },
+  { value = "volcan", label = "Volcán" },
+  { value = "costa", label = "Costa" },
+}
+
 local function filteredDinos(app)
   local game = app.game
   local filters = app.filters
@@ -141,9 +155,13 @@ local function drawDetail(app, dino, x, y, w, h, now)
   if not dino then
     local game = app.game
     local adults = 0
+    local visible = 0
     for _, candidate in ipairs(game.dinos) do
-      if now >= (candidate.adultAt or 0) then
-        adults = adults + 1
+      if not stateModule.isDinoPending(game, candidate.id) then
+        visible = visible + 1
+        if now >= (candidate.adultAt or 0) then
+          adults = adults + 1
+        end
       end
     end
     theme.setFont(11)
@@ -168,8 +186,8 @@ local function drawDetail(app, dino, x, y, w, h, now)
     love.graphics.print("Adultos", x + 130, y + 105)
     theme.setFont(13)
     theme.setColor(theme.colors.text, 1)
-    love.graphics.print(tostring(#game.dinos), x + 20, y + 118)
-    love.graphics.print(adults .. " / " .. #game.dinos, x + 130, y + 118)
+    love.graphics.print(tostring(visible), x + 20, y + 118)
+    love.graphics.print(adults .. " / " .. visible, x + 130, y + 118)
     theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
     love.graphics.print("Producción", x + 20, y + 143)
@@ -250,10 +268,30 @@ local function drawDetail(app, dino, x, y, w, h, now)
   theme.setColor(theme.colors.amber, 1)
   love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s", x + 90, rowY + 4)
 
+  widgets.cycle(app, x + 12, y + 366, 112, 38, "Rol", dino.role or "ninguno", roleOptions, function(value)
+    local ok, err = stateModule.setDinoRole(app.game, dino.id, value)
+    if ok then
+      local name = value == "ninguno" and "Sin rol" or config.roles[value].name
+      app:toast("Rol: " .. name .. ".", theme.colors.gold)
+    else
+      app:toast(err or "No se pudo asignar el rol.", theme.colors.red)
+    end
+  end, { tooltip = "El rol se activa cuando el ejemplar es adulto." })
+
+  widgets.cycle(app, x + 132, y + 366, 112, 38, "Hábitat", dino.habitat or "ninguno", habitatOptions, function(value)
+    local ok, err = stateModule.setDinoHabitat(app.game, dino.id, value)
+    if ok then
+      local name = value == "ninguno" and "Sin hábitat" or config.habitats[value].short
+      app:toast("Hábitat: " .. name .. ".", theme.colors.gold)
+    else
+      app:toast(err or "No se pudo asignar el hábitat.", theme.colors.red)
+    end
+  end, { tooltip = "Cada hábitat admite 3 residentes." })
+
   local busy = stateModule.isCrossing(app.game, dino.id)
-  widgets.button(app, x + 12, y + 378, w - 24, 40, "ENVIAR A CRUCES", {
+  widgets.button(app, x + 12, y + 414, 112, 34, "A CRUCES", {
     style = "primary",
-    font = 10,
+    font = 9,
     disabled = busy or not adult,
     tooltip = busy and "Este ejemplar está en un cruce." or (not adult and "Debe ser adulto.") or "Elegir como progenitor.",
     onClick = function()
@@ -278,7 +316,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
       end
     end,
   })
-  widgets.button(app, x + 12, y + 426, w - 24, 30, "LIBERAR EJEMPLAR", {
+  widgets.button(app, x + 132, y + 414, 112, 34, "LIBERAR", {
     style = "danger",
     font = 8,
     disabled = busy,
@@ -321,9 +359,15 @@ function breeding.draw(app)
   end)
 
   local list = filteredDinos(app)
+  local visibleTotal = 0
+  for _, candidate in ipairs(game.dinos) do
+    if not stateModule.isDinoPending(game, candidate.id) then
+      visibleTotal = visibleTotal + 1
+    end
+  end
   theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.printf(#list .. " / " .. #game.dinos, x + 574, y + 4, 70, "right")
+  love.graphics.printf(#list .. " / " .. visibleTotal, x + 574, y + 4, 70, "right")
   widgets.button(app, x + 650, y + 7, 78, 30, "LIMPIAR", {
     style = "ghost",
     font = 8,

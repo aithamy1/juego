@@ -50,6 +50,22 @@ local function defaultSettings()
   }
 end
 
+local function defaultHabitats()
+  local habitats = {}
+  for _, key in ipairs(config.habitatOrder) do
+    habitats[key] = { decor = false }
+  end
+  return habitats
+end
+
+local function zeroPrestigeTree()
+  local tree = {}
+  for key in pairs(config.prestigeTree) do
+    tree[key] = 0
+  end
+  return tree
+end
+
 function state.makeEgg(s, now, kind, payload)
   local egg = {
     id = s.nextEggId,
@@ -111,7 +127,14 @@ function state.new(seed, now)
     nestTimer = 0,
     cross = nil,
     pendingReveals = {},
-    prestige = { count = 0, totalLegacy = 0, lastGain = 0 },
+    habitats = defaultHabitats(),
+    prestige = {
+      count = 0,
+      totalLegacy = 0,
+      lastGain = 0,
+      points = 0,
+      tree = zeroPrestigeTree(),
+    },
     meta = { firstRun = true },
   }
   for i = 1, config.starting.incubatorSlots do
@@ -205,6 +228,8 @@ function state.addDino(s, data, now)
     bornAt = now,
     adultAt = now + adultTime,
     adult = false,
+    role = data.role,
+    habitat = data.habitat,
     lineage = data.lineage or {},
   }
   for _, gene in ipairs(genetics.visibleOrder) do
@@ -473,6 +498,92 @@ function state.isDinoPending(s, dinoId)
     end
   end
   return false
+end
+
+function state.habitatResidents(s, key)
+  local list = {}
+  for _, dino in ipairs(s.dinos or {}) do
+    if dino.habitat == key then
+      list[#list + 1] = dino
+    end
+  end
+  return list
+end
+
+function state.habitatCount(s, key)
+  return #state.habitatResidents(s, key)
+end
+
+function state.setDinoRole(s, dinoId, role)
+  local dino = state.findDino(s, dinoId)
+  if not dino then
+    return false, "Ejemplar no encontrado."
+  end
+  if role == "ninguno" then
+    role = nil
+  end
+  if role and not config.roles[role] then
+    return false, "Rol no válido."
+  end
+  dino.role = role
+  return true
+end
+
+function state.setDinoHabitat(s, dinoId, habitat)
+  local dino = state.findDino(s, dinoId)
+  if not dino then
+    return false, "Ejemplar no encontrado."
+  end
+  if habitat == "ninguno" then
+    habitat = nil
+  end
+  if habitat and not config.habitats[habitat] then
+    return false, "Hábitat no válido."
+  end
+  if habitat and dino.habitat ~= habitat then
+    local count = 0
+    for _, other in ipairs(s.dinos or {}) do
+      if other.id ~= dino.id and other.habitat == habitat then
+        count = count + 1
+      end
+    end
+    if count >= config.habitats[habitat].capacity then
+      return false, "Ese hábitat está lleno."
+    end
+  end
+  dino.habitat = habitat
+  return true
+end
+
+function state.buyDecoration(s, habitatKey)
+  local def = config.habitats[habitatKey]
+  local slot = s.habitats and s.habitats[habitatKey]
+  if not def or not slot then
+    return false, "Hábitat no válido."
+  end
+  if slot.decor then
+    return false, "Ese hábitat ya tiene decoración."
+  end
+  local currency = def.decor.currency
+  local cost = def.decor.cost
+  if (s[currency] or 0) < cost then
+    return false, "Faltan " .. cost .. (currency == "amber" and " ámbar." or " esencia.")
+  end
+  s[currency] = s[currency] - cost
+  slot.decor = true
+  return true, cost
+end
+
+function state.buyPrestigeNode(s, key)
+  local canBuy, reason = prestige.canBuyNode(s, key)
+  if not canBuy then
+    return false, reason
+  end
+  local level = (s.prestige.tree and s.prestige.tree[key]) or 0
+  local cost = prestige.nodeCost(key, level)
+  s.prestige.points = (s.prestige.points or 0) - cost
+  s.prestige.tree[key] = level + 1
+  return true, cost
 end
 
 function state.freeIncubator(s)
@@ -895,14 +1006,42 @@ function state.normalize(s)
   s.prestige.count = s.prestige.count or 0
   s.prestige.totalLegacy = s.prestige.totalLegacy or 0
   s.prestige.baselineHatches = s.prestige.baselineHatches or 0
+  s.prestige.points = math.max(0, s.prestige.points or 0)
+  s.prestige.tree = s.prestige.tree or {}
+  for key, def in pairs(config.prestigeTree) do
+    local level = s.prestige.tree[key] or 0
+    s.prestige.tree[key] = math.max(0, math.min(def.max, level))
+  end
+
+  s.habitats = s.habitats or {}
+  for _, key in ipairs(config.habitatOrder) do
+    s.habitats[key] = s.habitats[key] or {}
+    s.habitats[key].decor = not not s.habitats[key].decor
+  end
+
   s.meta = s.meta or {}
   if s.meta.firstRun == nil then
     s.meta.firstRun = false
   end
 
   local maxDinoId = 0
+  local habitatCounts = {}
   for _, dino in ipairs(s.dinos) do
     maxDinoId = math.max(maxDinoId, dino.id or 0)
+    if dino.role and not config.roles[dino.role] then
+      dino.role = nil
+    end
+    if dino.habitat and not config.habitats[dino.habitat] then
+      dino.habitat = nil
+    end
+    if dino.habitat then
+      local count = habitatCounts[dino.habitat] or 0
+      if count < config.habitats[dino.habitat].capacity then
+        habitatCounts[dino.habitat] = count + 1
+      else
+        dino.habitat = nil
+      end
+    end
     dino.genes = dino.genes or {}
     dino.functional = dino.functional or {
       productivity = 3, fertility = 3, resilience = 3, luck = 3,

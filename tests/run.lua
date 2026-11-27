@@ -9,6 +9,7 @@ local suites = {
   "tests.test_economy",
   "tests.test_save",
   "tests.test_state",
+  "tests.test_progression",
   "tests.test_sprites",
 }
 

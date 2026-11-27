@@ -31,7 +31,28 @@ function hatch.effectiveWeights(state)
   end
 
   local luckLevel = (state.upgrades and state.upgrades.luck) or 0
-  local luckMultiplier = 1 + config.rates.luckPerLevel * luckLevel
+  local now = state.lastTick or os.time()
+  local explorers = 0
+  local volcan = 0
+  for _, dino in ipairs(state.dinos or {}) do
+    if (dino.adultAt or 0) <= now then
+      if dino.role == "explorador" then
+        explorers = explorers + 1
+      end
+      if dino.habitat == "volcan" then
+        volcan = volcan + 1
+      end
+    end
+  end
+  local treeLuck = (state.prestige and state.prestige.tree and state.prestige.tree.suerte) or 0
+  local decorLuck = state.habitats and state.habitats.volcan and state.habitats.volcan.decor
+    and config.habitats.volcan.decor.luckBonus or 0
+  local luckBonus = config.rates.luckPerLevel * luckLevel
+    + math.min(config.roles.explorador.luckCap, explorers * config.roles.explorador.luckPerDino)
+    + math.min(config.habitats.volcan.luckCap, volcan * config.habitats.volcan.luckPerResident)
+    + decorLuck
+    + treeLuck * config.prestigeTree.suerte.perLevel
+  local luckMultiplier = 1 + math.min(1.50, luckBonus)
   for _, key in ipairs(config.rarityOrder) do
     if key ~= "common" and key ~= "uncommon" then
       weights[key] = weights[key] * luckMultiplier

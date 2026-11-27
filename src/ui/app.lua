@@ -67,6 +67,7 @@ function app.new(game)
   local self = setmetatable({}, app)
   self.game = game
   self.pendingCount = #game.pendingReveals
+  self.openingAll = false
   self.scene = "nest"
   self.now = os.time()
   self.mouse = { x = -1, y = -1, hand = false, down = false }
@@ -126,9 +127,12 @@ function app:openModal(kind, data)
   self.tooltip = nil
 end
 
-function app:openNextReveal(eggId)
+function app:openNextReveal(eggId, fromQueue)
   if self.modal then
     return false
+  end
+  if not fromQueue then
+    self.openingAll = false
   end
   local reveal = nil
   if eggId then
@@ -152,7 +156,17 @@ function app:openNextReveal(eggId)
   return true
 end
 
+function app:openAllReveals()
+  if #self.game.pendingReveals == 0 then
+    self:toast("No hay huevos listos para abrir.", theme.colors.muted)
+    return false
+  end
+  self.openingAll = #self.game.pendingReveals > 1
+  return self:openNextReveal(nil, true)
+end
+
 function app:closeModal()
+  local wasReveal = self.modal and self.modal.kind == "reveal"
   if self.modal and self.modal.kind == "help" then
     self.game.meta.firstRun = false
     self:save()
@@ -160,6 +174,14 @@ function app:closeModal()
   self.modal = nil
   self.click = nil
   self.tooltip = nil
+  if wasReveal and self.openingAll then
+    if #self.game.pendingReveals > 0 then
+      self:openNextReveal(nil, true)
+    else
+      self.openingAll = false
+      self:toast("Has abierto todos los huevos pendientes.", theme.colors.gold)
+    end
+  end
 end
 
 function app:save()

@@ -200,9 +200,19 @@ local function drawPasture(app, x, y, w, h, now)
   love.graphics.printf(#list > shown and (shown .. " / " .. #list) or tostring(#list),
     x + w - 100, y + 14, 88, "right")
 
+  widgets.button(app, x + w - 202, y + 9, 92, 18, "HÁBITATS", {
+    style = "secondary",
+    font = 7,
+    tooltip = "Gestionar residentes, bonus y decoración.",
+    onClick = function()
+      app:openModal("habitats", {})
+    end,
+  })
+  local habitatsHover = widgets.hover(app, x + w - 202, y + 9, 92, 18)
+
   love.graphics.setScissor()
 
-  if not hoveredDino then
+  if not hoveredDino and not habitatsHover then
     if widgets.hover(app, x, y, w, h) then
       app.mouse.hand = true
       app.tooltip = "Ver todos los ejemplares en el Criadero."
@@ -402,7 +412,8 @@ function nest.draw(app)
   theme.setColor(theme.colors.muted, 1)
   if pending > 0 then
     love.graphics.printf(#game.eggs .. " / " .. economy.nestCapacity(game), x + 150, eggsY + 10, 76, "right")
-    widgets.button(app, x + 236, eggsY + 5, 208, 24, "ABRIR HUEVOS (" .. pending .. ")", {
+    local primaryWidth = pending > 1 and 140 or 208
+    widgets.button(app, x + 236, eggsY + 5, primaryWidth, 24, "ABRIR HUEVOS (" .. pending .. ")", {
       style = "primary",
       font = 8,
       tooltip = "Abrir el siguiente huevo listo.",
@@ -410,6 +421,16 @@ function nest.draw(app)
         app:openNextReveal()
       end,
     })
+    if pending > 1 then
+      widgets.button(app, x + 384, eggsY + 5, 60, 24, "TODOS", {
+        style = "secondary",
+        font = 7,
+        tooltip = "Abrir todos los huevos pendientes en cadena.",
+        onClick = function()
+          app:openAllReveals()
+        end,
+      })
+    end
   else
     love.graphics.printf(#game.eggs .. " / " .. economy.nestCapacity(game), x + 350, eggsY + 10, 92, "right")
     if #game.eggs > 8 then
