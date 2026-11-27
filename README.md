@@ -80,6 +80,7 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 
 - **Roles**: cada ejemplar puede ser recolector, incubador o explorador desde su ficha. Los recolectores producen un 25 % más de ámbar propio; cada incubador adulto reduce la incubación un 2 % (máximo 10 %); cada explorador adulto sube un 1 % el peso de raro o superior (máximo 10 %).
 - **Hábitats**: el botón **HÁBITATS** de la pradera abre el panel de los tres biomas. Cada uno admite 3 residentes. Bosque da +15 % de producción a sus residentes; Volcán da +1 % de peso raro+ por residente adulto (máximo 3 %); Costa reduce la incubación un 2 % por residente adulto (máximo 6 %).
+- **Pradera por hábitat**: las pestañas **TODOS / BOSQUE / VOLCÁN / COSTA** cambian el fondo y muestran solo los dinosaurios asignados a ese hábitat, caminando de lado a lado. La pestaña **TODOS** conserva la vista global.
 - **Decoración**: cada hábitat tiene una decoración permanente que se compra con ámbar o esencia. Añade un bonus adicional y cambia el dibujo del bioma.
 - **Árbol de legado**: en Ajustes, el botón **ÁRBOL DE LEGADO** gasta puntos obtenidos al migrar. Tiene seis nodos permanentes: incubadora inicial, producción, suerte, capacidad del nido, incubación y puntos de legado. Los nodos inferiores piden nivel 1 del nodo superior.
 
@@ -122,7 +123,7 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 1. El nido genera huevos automáticamente. Haz clic en un huevo para incubarlo.
 2. Cuando termina la incubación, pulsa **ABRIR HUEVOS** en el Nido. La animación no se abre sola. **TODOS** abre la cola pendiente en cadena.
 3. Al abrirlo nace un dinosaurio. Los adultos producen ámbar de forma pasiva.
-4. Asigna roles y hábitats desde la ficha del ejemplar. La pradera tiene un botón **HÁBITATS** para ver residentes y comprar decoración.
+4. Asigna roles y hábitats desde la ficha del ejemplar. En la pradera, las pestañas **TODOS / BOSQUE / VOLCÁN / COSTA** cambian el fondo y muestran solo los residentes de cada hábitat. **HÁBITATS** abre el panel de residentes y decoración.
 5. Libera ejemplares para obtener esencia.
 6. Compra mejoras con ámbar y esencia: ritmo del nido, incubadoras, incubación, capacidad, suerte y producción.
 7. Cruza dos adultos de la misma especie. El simulador muestra la distribución exacta de los genes visibles antes de confirmar.

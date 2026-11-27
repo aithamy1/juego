@@ -60,7 +60,7 @@ local function drawHelp(app, modal)
   love.graphics.print("El bucle", x + 28, y + 94)
   theme.setFont(11)
   theme.setColor(theme.colors.textDim, 1)
-  love.graphics.printf("El nido produce huevos. Los incubas y, cuando termina la incubación, pulsas ABRIR HUEVOS para abrirlos. Nacen dinosaurios y los adultos generan ámbar de forma pasiva. Con ámbar compras mejoras; con esencia (al liberar ejemplares) amplías el nido y mejoras la suerte. Los cruces heredan genes con proporciones mendelianas y el Dinodex registra cada combinación nueva. En el Criadero asignas rol y hábitat; en la pradera abres Hábitats para decorar. Los puntos de la migración se gastan en el Árbol de legado de Ajustes.",
+  love.graphics.printf("El nido produce huevos. Los incubas y, cuando termina la incubación, pulsas ABRIR HUEVOS para abrirlos. Nacen dinosaurios y los adultos generan ámbar de forma pasiva. Con ámbar compras mejoras; con esencia (al liberar ejemplares) amplías el nido y mejoras la suerte. Los cruces heredan genes con proporciones mendelianas y el Dinodex registra cada combinación nueva. En el Criadero asignas rol y hábitat; en la pradera, las pestañas TODOS, BOSQUE, VOLCÁN y COSTA cambian la vista y muestran solo a sus residentes. En Hábitats puedes decorar. Los puntos de la migración se gastan en el Árbol de legado de Ajustes.",
     x + 28, y + 118, 784, "left")
 
   theme.setFont(13)

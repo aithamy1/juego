@@ -72,6 +72,7 @@ function app.new(game)
   self.gamepadCursor = false
   self.compareA = nil
   self.compareB = nil
+  self.pastureHabitat = "todos"
   self.scene = "nest"
   self.now = os.time()
   self.mouse = { x = -1, y = -1, hand = false, down = false }

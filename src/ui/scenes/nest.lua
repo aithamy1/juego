@@ -29,6 +29,72 @@ local function grassTuft(x, y, height, color, alpha)
   love.graphics.line(x, y, x + 2, y - height + 1)
 end
 
+local function drawSkyBands(ix, iy, iw, topColor, bottomColor)
+  for band = 0, 3 do
+    local t = band / 3
+    theme.setColor({
+      topColor[1] + (bottomColor[1] - topColor[1]) * t,
+      topColor[2] + (bottomColor[2] - topColor[2]) * t,
+      topColor[3] + (bottomColor[3] - topColor[3]) * t,
+    }, 1)
+    love.graphics.rectangle("fill", ix, iy + band * 18, iw, 18)
+  end
+end
+
+local function drawClouds(ix, iy, iw, time, color, alpha)
+  local cloudShift = math.sin(time * 0.18) * 26
+  for i = 0, 2 do
+    local cx = ix + 30 + ((i * 118 + time * 3 + cloudShift) % (iw + 80)) - 40
+    local cy = iy + 16 + (i % 2) * 13
+    theme.setColor(color, alpha)
+    love.graphics.rectangle("fill", cx, cy, 34, 8)
+    love.graphics.rectangle("fill", cx + 8, cy - 6, 20, 8)
+  end
+end
+
+local function drawHabitatTabs(app, x, y)
+  local tabs = {
+    { key = "todos", label = "TODOS", tooltip = "Ver todos los ejemplares de la colonia." },
+    { key = "bosque", label = "BOSQUE", tooltip = "Ver los residentes del Bosque." },
+    { key = "volcan", label = "VOLCÁN", tooltip = "Ver los residentes del Volcán." },
+    { key = "costa", label = "COSTA", tooltip = "Ver los residentes de la Costa." },
+  }
+  local barW = 238
+  theme.panel(x + 9, y + 9, barW, 18, {
+    color = { 0.07, 0.10, 0.13 },
+    borderColor = theme.colors.goldDark,
+    shadow = false,
+    borderWidth = 1,
+  })
+  local segmentW = (barW - 4) / #tabs
+  local hovered = false
+  for index, tab in ipairs(tabs) do
+    local tx = x + 11 + (index - 1) * segmentW
+    local selected = (app.pastureHabitat or "todos") == tab.key
+    local hover = widgets.hover(app, tx, y + 10, segmentW, 16)
+    if hover then
+      hovered = true
+      app.mouse.hand = true
+      app.tooltip = tab.tooltip
+    end
+    if widgets.click(app, tx, y + 10, segmentW, 16) then
+      app.pastureHabitat = tab.key
+    end
+    if selected then
+      theme.setColor(theme.colors.gold, 1)
+      love.graphics.rectangle("fill", tx, y + 10, segmentW, 16)
+      theme.setColor(theme.colors.ink, 1)
+    else
+      theme.setColor(hover and theme.colors.panel3 or theme.colors.bg, 0.9)
+      love.graphics.rectangle("fill", tx, y + 10, segmentW, 16)
+      theme.setColor(hover and theme.colors.goldLight or theme.colors.textDim, 1)
+    end
+    theme.setFont(8)
+    love.graphics.printf(tab.label, tx, y + 13, segmentW, "center")
+  end
+  return hovered
+end
+
 local function drawPasture(app, x, y, w, h, now)
   local game = app.game
   local time = game.settings.calm and 0 or love.timer.getTime()
@@ -42,83 +108,124 @@ local function drawPasture(app, x, y, w, h, now)
   local ix, iy, iw, ih = x + 5, y + 5, w - 10, h - 10
   love.graphics.setScissor(ix, iy, iw, ih)
 
-  -- cielo
-  local skyTop = { 0.31, 0.58, 0.79 }
-  local skyBottom = { 0.56, 0.79, 0.87 }
-  for band = 0, 3 do
-    local t = band / 3
-    theme.setColor({
-      skyTop[1] + (skyBottom[1] - skyTop[1]) * t,
-      skyTop[2] + (skyBottom[2] - skyTop[2]) * t,
-      skyTop[3] + (skyBottom[3] - skyTop[3]) * t,
-    }, 1)
-    love.graphics.rectangle("fill", ix, iy + band * 18, iw, 18)
-  end
-
-  -- sol
-  theme.setColor(theme.colors.goldLight, 1)
-  love.graphics.circle("fill", ix + iw - 38, iy + 28, 12)
-  theme.setColor({ 1, 0.95, 0.62 }, 0.45)
-  love.graphics.circle("fill", ix + iw - 38, iy + 28, 17)
-
-  -- nubes
-  local cloudShift = math.sin(time * 0.18) * 26
-  for i = 0, 2 do
-    local cx = ix + 30 + ((i * 118 + time * 3 + cloudShift) % (iw + 80)) - 40
-    local cy = iy + 16 + (i % 2) * 13
-    theme.setColor(theme.colors.white, 0.55)
-    love.graphics.rectangle("fill", cx, cy, 34, 8)
-    love.graphics.rectangle("fill", cx + 8, cy - 6, 20, 8)
-  end
-
-  -- colinas
-  theme.setColor({ 0.25, 0.48, 0.31 }, 1)
-  love.graphics.ellipse("fill", ix + 80, iy + 82, 120, 42)
-  love.graphics.ellipse("fill", ix + iw - 40, iy + 84, 105, 38)
-  theme.setColor({ 0.19, 0.40, 0.25 }, 1)
-  love.graphics.ellipse("fill", ix + 260, iy + 88, 150, 42)
-
-  -- césped
-  theme.setColor({ 0.30, 0.58, 0.24 }, 1)
-  love.graphics.rectangle("fill", ix, iy + 60, iw, ih - 60)
-  theme.setColor({ 0.25, 0.50, 0.20 }, 1)
-  love.graphics.rectangle("fill", ix, iy + 72, iw, ih - 72)
-  theme.setColor({ 0.36, 0.66, 0.27 }, 0.8)
-  love.graphics.rectangle("fill", ix, iy + 60, iw, 4)
-
-  -- valla
-  theme.setColor({ 0.77, 0.58, 0.33 }, 1)
-  love.graphics.rectangle("fill", ix, iy + 68, iw, 3)
-  love.graphics.rectangle("fill", ix, iy + 78, iw, 3)
-  for px = ix + 8, ix + iw - 4, 30 do
-    love.graphics.rectangle("fill", px, iy + 58, 4, 28)
-    theme.setColor({ 0.52, 0.36, 0.19 }, 1)
-    love.graphics.rectangle("fill", px + 3, iy + 58, 1, 28)
+  local habitat = app.pastureHabitat or "todos"
+  if habitat == "volcan" then
+    drawSkyBands(ix, iy, iw, { 0.17, 0.10, 0.16 }, { 0.42, 0.18, 0.14 })
+    theme.setColor({ 1.0, 0.58, 0.25 }, 1)
+    love.graphics.circle("fill", ix + iw - 38, iy + 28, 12)
+    theme.setColor({ 1.0, 0.48, 0.18 }, 0.28)
+    love.graphics.circle("fill", ix + iw - 38, iy + 28, 19)
+    drawClouds(ix, iy, iw, time, { 0.42, 0.34, 0.36 }, 0.35)
+    theme.setColor({ 0.24, 0.12, 0.14 }, 1)
+    love.graphics.polygon("fill", ix + 38, iy + 78, ix + iw / 2, iy + 18, ix + iw - 38, iy + 78)
+    theme.setColor({ 0.08, 0.06, 0.08 }, 1)
+    love.graphics.polygon("fill", ix + iw * 0.41, iy + 78, ix + iw / 2, iy + 18, ix + iw * 0.59, iy + 78)
+    theme.setColor({ 1.0, 0.43, 0.10 }, 0.9)
+    love.graphics.setLineWidth(2)
+    love.graphics.line(ix + iw / 2, iy + 20, ix + iw * 0.46, iy + 40, ix + iw * 0.54, iy + 54, ix + iw * 0.48, iy + 70)
+    love.graphics.setLineWidth(1)
+    theme.setColor({ 0.13, 0.10, 0.10 }, 1)
+    love.graphics.rectangle("fill", ix, iy + 62, iw, ih - 62)
+    theme.setColor({ 0.21, 0.14, 0.12 }, 1)
+    love.graphics.rectangle("fill", ix, iy + 80, iw, ih - 80)
+    theme.setColor({ 0.95, 0.32, 0.08 }, 0.55)
+    for i = 0, 6 do
+      love.graphics.rectangle("fill", ix + 18 + i * 62, iy + 96 + (i % 3) * 12, 16, 3)
+    end
+    theme.setColor({ 1.0, 0.58, 0.20 }, 0.6)
+    for i = 0, 8 do
+      local ex = ix + 20 + ((i * 53 + time * 16) % (iw - 40))
+      local ey = iy + 90 + (i % 5) * 14
+      love.graphics.rectangle("fill", ex, ey, 2, 2)
+    end
+  elseif habitat == "costa" then
+    drawSkyBands(ix, iy, iw, { 0.35, 0.65, 0.85 }, { 0.66, 0.86, 0.91 })
+    theme.setColor({ 1.0, 0.86, 0.42 }, 1)
+    love.graphics.circle("fill", ix + iw - 38, iy + 28, 12)
+    theme.setColor({ 1.0, 0.90, 0.52 }, 0.28)
+    love.graphics.circle("fill", ix + iw - 38, iy + 28, 18)
+    drawClouds(ix, iy, iw, time, { 0.95, 0.97, 0.98 }, 0.55)
+    theme.setColor({ 0.18, 0.46, 0.65 }, 1)
+    love.graphics.rectangle("fill", ix, iy + 54, iw, 38)
+    theme.setColor({ 0.24, 0.58, 0.72 }, 0.8)
+    love.graphics.rectangle("fill", ix, iy + 62, iw, 20)
+    theme.setColor({ 0.72, 0.92, 0.95 }, 0.55)
+    love.graphics.setLineWidth(2)
+    for i = 0, 6 do
+      local wx = ix + 10 + i * 68 + math.sin(time * 0.7 + i) * 6
+      love.graphics.line(wx, iy + 70 + (i % 2) * 10, wx + 26, iy + 70 + (i % 2) * 10)
+    end
+    love.graphics.setLineWidth(1)
+    theme.setColor({ 0.86, 0.76, 0.52 }, 1)
+    love.graphics.rectangle("fill", ix, iy + 90, iw, ih - 90)
+    theme.setColor({ 0.95, 0.88, 0.66 }, 1)
+    love.graphics.rectangle("fill", ix, iy + 90, iw, 4)
+    theme.setColor({ 0.72, 0.62, 0.42 }, 0.8)
+    for i = 0, 5 do
+      local sx = ix + 18 + i * 78
+      love.graphics.rectangle("fill", sx, iy + 112 + (i % 3) * 18, 5, 3)
+    end
+  else
+    drawSkyBands(ix, iy, iw, { 0.31, 0.58, 0.79 }, { 0.56, 0.79, 0.87 })
+    theme.setColor(theme.colors.goldLight, 1)
+    love.graphics.circle("fill", ix + iw - 38, iy + 28, 12)
+    theme.setColor({ 1.0, 0.95, 0.62 }, 0.45)
+    love.graphics.circle("fill", ix + iw - 38, iy + 28, 17)
+    drawClouds(ix, iy, iw, time, theme.colors.white, 0.55)
+    theme.setColor({ 0.25, 0.48, 0.31 }, 1)
+    love.graphics.ellipse("fill", ix + 80, iy + 82, 120, 42)
+    love.graphics.ellipse("fill", ix + iw - 40, iy + 84, 105, 38)
+    theme.setColor({ 0.19, 0.40, 0.25 }, 1)
+    love.graphics.ellipse("fill", ix + 260, iy + 88, 150, 42)
+    if habitat == "bosque" then
+      for i = 0, 2 do
+        local tx = ix + 52 + i * 138
+        theme.setColor({ 0.42, 0.29, 0.17 }, 1)
+        love.graphics.rectangle("fill", tx, iy + 40, 5, 30)
+        theme.setColor({ 0.18, 0.45, 0.22 }, 1)
+        love.graphics.circle("fill", tx + 2, iy + 34, 16)
+        love.graphics.circle("fill", tx - 10, iy + 40, 10)
+        love.graphics.circle("fill", tx + 13, iy + 40, 9)
+      end
+    end
+    theme.setColor({ 0.30, 0.58, 0.24 }, 1)
+    love.graphics.rectangle("fill", ix, iy + 60, iw, ih - 60)
+    theme.setColor({ 0.25, 0.50, 0.20 }, 1)
+    love.graphics.rectangle("fill", ix, iy + 72, iw, ih - 72)
+    theme.setColor({ 0.36, 0.66, 0.27 }, 0.8)
+    love.graphics.rectangle("fill", ix, iy + 60, iw, 4)
     theme.setColor({ 0.77, 0.58, 0.33 }, 1)
-  end
-
-  -- hierba que se mece de un lado a otro
-  local shiftBack = math.sin(time * 0.55) * 12
-  local shiftFront = math.sin(time * 0.85 + 1.2) * 22
-  for i = 0, math.ceil(iw / 28) + 2 do
-    local gx = ix + i * 28 - 20 + shiftBack
-    local gy = iy + 96 + (i % 4) * 8
-    grassTuft(gx, gy, 7, { 0.20, 0.42, 0.18 }, 0.75)
-  end
-  for i = 0, math.ceil(iw / 34) + 2 do
-    local gx = ix + i * 34 - 24 + shiftFront
-    local gy = iy + ih - 4 - (i % 3) * 5
-    grassTuft(gx, gy, 12, { 0.45, 0.75, 0.32 }, 0.85)
-    if i % 5 == 0 then
-      theme.setColor({ 0.97, 0.82, 0.34 }, 1)
-      love.graphics.rectangle("fill", gx - 1, gy - 14, 3, 3)
+    love.graphics.rectangle("fill", ix, iy + 68, iw, 3)
+    love.graphics.rectangle("fill", ix, iy + 78, iw, 3)
+    for px = ix + 8, ix + iw - 4, 30 do
+      love.graphics.rectangle("fill", px, iy + 58, 4, 28)
+      theme.setColor({ 0.52, 0.36, 0.19 }, 1)
+      love.graphics.rectangle("fill", px + 3, iy + 58, 1, 28)
+      theme.setColor({ 0.77, 0.58, 0.33 }, 1)
+    end
+    local shiftBack = math.sin(time * 0.55) * 12
+    local shiftFront = math.sin(time * 0.85 + 1.2) * 22
+    for i = 0, math.ceil(iw / 28) + 2 do
+      local gx = ix + i * 28 - 20 + shiftBack
+      local gy = iy + 96 + (i % 4) * 8
+      grassTuft(gx, gy, 7, { 0.20, 0.42, 0.18 }, 0.75)
+    end
+    for i = 0, math.ceil(iw / 34) + 2 do
+      local gx = ix + i * 34 - 24 + shiftFront
+      local gy = iy + ih - 4 - (i % 3) * 5
+      grassTuft(gx, gy, 12, { 0.45, 0.75, 0.32 }, 0.85)
+      if i % 5 == 0 then
+        theme.setColor({ 0.97, 0.82, 0.34 }, 1)
+        love.graphics.rectangle("fill", gx - 1, gy - 14, 3, 3)
+      end
     end
   end
 
-  -- dinosaurios ordenados por rareza; los primeros 6 salen a la pradera
+  -- dinosaurios ordenados por rareza; la pradera filtra por hábitat
   local list = {}
   for _, dino in ipairs(game.dinos) do
-    if not stateModule.isDinoPending(game, dino.id) then
+    if not stateModule.isDinoPending(game, dino.id)
+      and (habitat == "todos" or dino.habitat == habitat) then
       list[#list + 1] = dino
     end
   end
@@ -132,18 +239,22 @@ local function drawPasture(app, x, y, w, h, now)
     return a.id > b.id
   end)
 
-  local shown = math.min(6, #list)
+  local slots = habitat == "todos" and 2 or 1
+  local shown = math.min(slots * 3, #list)
   local hoveredDino = false
   local lanes = {
     { ground = iy + ih - 78, scale = 0.34 },
     { ground = iy + ih - 50, scale = 0.41 },
     { ground = iy + ih - 22, scale = 0.48 },
   }
-  local segW = (iw - 36) / 2
+  local segW = (iw - 36) / slots
   for lane = 1, 3 do
     local laneCfg = lanes[lane]
-    for slot = 1, 2 do
-      local index = (slot - 1) * 3 + lane
+    local index = habitat == "todos" and lane or (4 - lane)
+    for slot = 1, slots do
+      if habitat == "todos" then
+        index = (slot - 1) * 3 + lane
+      end
       local dino = list[index]
       if dino then
         local phase = slot * 2.1 + lane * 1.3 + (dino.id % 7) * 0.17
@@ -171,7 +282,12 @@ local function drawPasture(app, x, y, w, h, now)
   if #list == 0 then
     theme.setFont(10)
     theme.setColor(theme.colors.text, 1)
-    if #game.pendingReveals > 0 then
+    if habitat ~= "todos" then
+      love.graphics.printf("Este hábitat está vacío", ix, iy + 128, iw, "center")
+      theme.setFont(8)
+      theme.setColor(theme.colors.textDim, 1)
+      love.graphics.printf("Asigna ejemplares desde su ficha en el Criadero.", ix, iy + 146, iw, "center")
+    elseif #game.pendingReveals > 0 then
       love.graphics.printf("Huevo listo para abrir", ix, iy + 128, iw, "center")
       theme.setFont(8)
       theme.setColor(theme.colors.textDim, 1)
@@ -184,23 +300,19 @@ local function drawPasture(app, x, y, w, h, now)
     end
   end
 
-  -- etiqueta y contador
-  theme.panel(x + 9, y + 9, 84, 18, {
-    color = { 0.07, 0.18, 0.10 },
-    borderColor = theme.colors.goldDark,
-    shadow = false,
-    borderWidth = 1,
-  })
-  theme.setFont(8)
-  theme.setColor(theme.colors.gold, 1)
-  love.graphics.print("PRADERA", x + 18, y + 14)
-
+  -- selector de hábitat y acciones
+  local tabsHover = drawHabitatTabs(app, x, y)
   theme.setFont(8)
   theme.setColor(theme.colors.text, 1)
-  love.graphics.printf(#list > shown and (shown .. " / " .. #list) or tostring(#list),
-    x + w - 100, y + 14, 88, "right")
+  if habitat == "todos" then
+    love.graphics.printf(#list > shown and (shown .. " / " .. #list) or tostring(#list),
+      x + w - 100, y + 14, 88, "right")
+  else
+    love.graphics.printf(#list .. " / " .. config.habitats[habitat].capacity,
+      x + w - 100, y + 14, 88, "right")
+  end
 
-  widgets.button(app, x + w - 202, y + 9, 92, 18, "HÁBITATS", {
+  widgets.button(app, x + w - 198, y + 9, 88, 18, "HÁBITATS", {
     style = "secondary",
     font = 7,
     tooltip = "Gestionar residentes, bonus y decoración.",
@@ -208,11 +320,11 @@ local function drawPasture(app, x, y, w, h, now)
       app:openModal("habitats", {})
     end,
   })
-  local habitatsHover = widgets.hover(app, x + w - 202, y + 9, 92, 18)
+  local habitatsHover = widgets.hover(app, x + w - 198, y + 9, 88, 18)
 
   love.graphics.setScissor()
 
-  if not hoveredDino and not habitatsHover then
+  if not hoveredDino and not habitatsHover and not tabsHover then
     if widgets.hover(app, x, y, w, h) then
       app.mouse.hand = true
       app.tooltip = "Ver todos los ejemplares en el Criadero."
