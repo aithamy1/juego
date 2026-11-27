@@ -13,7 +13,7 @@ function love.conf(t)
   t.window.msaa = 0
   t.window.highdpi = true
 
-  t.modules.joystick = false
+  t.modules.joystick = true
   t.modules.physics = false
   t.modules.video = false
   t.modules.audio = true

@@ -125,6 +125,11 @@ local function drawCard(app, dino, x, y, w, h, now)
     borderWidth = selected and 2 or 1,
   })
   render.drawDino(dino, x + w / 2, y + 42, 0.38, {})
+  if dino.favorite then
+    theme.setFont(9)
+    theme.setColor(theme.colors.gold, 1)
+    love.graphics.print("F", x + w - 12, y + 5)
+  end
   theme.setFont(10)
   theme.setColor(theme.colors.text, 1)
   love.graphics.printf(config.species[dino.species].name, x + 4, y + 74, w - 8, "center")
@@ -216,6 +221,31 @@ local function drawDetail(app, dino, x, y, w, h, now)
   end
 
   local adult = now >= (dino.adultAt or 0)
+  widgets.button(app, x + 8, y + 8, 28, 24, "VS", {
+    style = "ghost",
+    font = 8,
+    tooltip = "Comparar este ejemplar con otro.",
+    onClick = function()
+      app.compareA = dino.id
+      app.compareB = nil
+      for _, other in ipairs(app.game.dinos) do
+        if other.id ~= dino.id and not stateModule.isDinoPending(app.game, other.id) then
+          app.compareB = other.id
+          break
+        end
+      end
+      app:openModal("compare", {})
+    end,
+  })
+  widgets.button(app, x + w - 36, y + 8, 28, 24, "F", {
+    style = dino.favorite and "primary" or "ghost",
+    font = 10,
+    tooltip = dino.favorite and "Quitar de favoritos (protegido)." or "Marcar como favorito para no liberarlo por error.",
+    onClick = function()
+      stateModule.setDinoFavorite(app.game, dino.id, not dino.favorite)
+      app:toast(dino.favorite and "Ejemplar protegido." or "Protección quitada.", theme.colors.gold)
+    end,
+  })
   render.drawDino(dino, x + w / 2, y + 80, 0.92, {})
   theme.setFont(15)
   theme.setColor(theme.colors.text, 1)
@@ -319,8 +349,10 @@ local function drawDetail(app, dino, x, y, w, h, now)
   widgets.button(app, x + 132, y + 414, 112, 34, "LIBERAR", {
     style = "danger",
     font = 8,
-    disabled = busy,
-    tooltip = busy and "No puedes liberar un ejemplar en cruce." or "Obtienes esencia según su rareza.",
+    disabled = busy or dino.favorite,
+    tooltip = busy and "No puedes liberar un ejemplar en cruce."
+      or (dino.favorite and "Quita la estrella de favorito para liberarlo.")
+      or "Obtienes esencia según su rareza.",
     onClick = function()
       if dino.rarity == "epic" or dino.rarity == "legendary" then
         app:openModal("release", { dinoId = dino.id })
@@ -329,6 +361,8 @@ local function drawDetail(app, dino, x, y, w, h, now)
         if ok then
           app.selectedDino = nil
           app:toast("Liberado. +" .. essence .. " esencia.", theme.colors.essence)
+        else
+          app:toast(essence or "No se pudo liberar.", theme.colors.red)
         end
       end
     end,

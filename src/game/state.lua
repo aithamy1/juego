@@ -44,6 +44,12 @@ local function defaultSettings()
   return {
     music = config.settings.defaultMusic,
     sfx = config.settings.defaultSfx,
+    musicVolume = config.settings.defaultMusicVolume,
+    sfxVolume = config.settings.defaultSfxVolume,
+    colorblind = config.settings.defaultColorblind,
+    largeText = config.settings.defaultLargeText,
+    fullscreen = config.settings.defaultFullscreen,
+    uiScale = config.settings.defaultUiScale,
     calm = false,
     reminder = config.settings.defaultReminder,
     dailyCap = config.settings.defaultDailyCap,
@@ -102,8 +108,10 @@ function state.new(seed, now)
     upgrades = zeroUpgrades(),
     stats = {
       hatched = 0,
+      opened = 0,
       nestHatched = 0,
       crossHatched = 0,
+      crosses = 0,
       byRarity = zeroRarityCounts(),
       nestByRarity = zeroRarityCounts(),
       mutations = 0,
@@ -114,6 +122,8 @@ function state.new(seed, now)
       amberEarned = 0,
       prestiges = 0,
     },
+    achievements = { unlocked = {} },
+    goals = { active = {}, completed = {} },
     log = {},
     dinodex = {
       variants = {},
@@ -457,6 +467,7 @@ function state.dismissReveal(s, revealId)
         return false
       end
       table.remove(s.pendingReveals, i)
+      s.stats.opened = (s.stats.opened or 0) + 1
       return true
     end
   end
@@ -526,6 +537,15 @@ function state.setDinoRole(s, dinoId, role)
     return false, "Rol no válido."
   end
   dino.role = role
+  return true
+end
+
+function state.setDinoFavorite(s, dinoId, value)
+  local dino = state.findDino(s, dinoId)
+  if not dino then
+    return false, "Ejemplar no encontrado."
+  end
+  dino.favorite = not not value
   return true
 end
 
@@ -661,6 +681,7 @@ function state.addCrossEgg(s, now)
   end
   local egg = state.makeEgg(s, s.cross.finishAt or now, "cruce", s.cross.child)
   s.eggs[#s.eggs + 1] = egg
+  s.stats.crosses = (s.stats.crosses or 0) + 1
   s.cross = nil
   return egg
 end
@@ -731,12 +752,66 @@ function state.releaseDino(s, dinoId)
   if not dino then
     return false, "Ese ejemplar ya no existe."
   end
+  if dino.favorite then
+    return false, "Quita la estrella de favorito antes de liberarlo."
+  end
   local rarity = config.rarity[dino.rarity] or config.rarity.common
   local essence = rarity.essence
   table.remove(s.dinos, index)
   s.essence = s.essence + essence
   s.stats.released = (s.stats.released or 0) + 1
   return true, essence
+end
+
+function state.duplicatePlan(s)
+  local groups, order = {}, {}
+  for _, dino in ipairs(s.dinos or {}) do
+    if not dino.favorite and not dino.habitat and not state.isDinoPending(s, dino.id) and not state.isCrossing(s, dino.id) then
+      local key = table.concat({
+        dino.species,
+        dino.rarity,
+        dino.genes and dino.genes.pattern or "liso",
+        dino.genes and dino.genes.primaryColor or "verde",
+        dino.genes and dino.genes.secondaryColor or "crema",
+        dino.genes and dino.genes.crest or "ninguna",
+        dino.mutation or "ninguna",
+      }, "|")
+      if not groups[key] then
+        groups[key] = {}
+        order[#order + 1] = key
+      end
+      groups[key][#groups[key] + 1] = dino
+    end
+  end
+  local plan = {}
+  local essence = 0
+  for _, key in ipairs(order) do
+    local list = groups[key]
+    if #list > 1 then
+      table.sort(list, function(a, b)
+        return economy.dinoRate(a, s) > economy.dinoRate(b, s)
+      end)
+      for i = 2, #list do
+        local dino = list[i]
+        plan[#plan + 1] = dino.id
+        essence = essence + ((config.rarity[dino.rarity] or config.rarity.common).essence or 0)
+      end
+    end
+  end
+  return plan, essence
+end
+
+function state.releaseDuplicates(s)
+  local plan = state.duplicatePlan(s)
+  local count, essence = 0, 0
+  for _, id in ipairs(plan) do
+    local ok, value = state.releaseDino(s, id)
+    if ok then
+      count = count + 1
+      essence = essence + value
+    end
+  end
+  return count, essence
 end
 
 function state.canBuyUpgrade(s, key)
@@ -802,8 +877,18 @@ function state.prestigeNow(s, founderIds, now)
 end
 
 function state.setSetting(s, key, value)
-  if key == "calm" or key == "music" or key == "sfx" then
+  if key == "calm" or key == "music" or key == "sfx"
+    or key == "colorblind" or key == "largeText" or key == "fullscreen" then
     s.settings[key] = not not value
+  elseif key == "musicVolume" or key == "sfxVolume" then
+    s.settings[key] = math.max(0, math.min(100, math.floor((tonumber(value) or 0) + 0.5)))
+  elseif key == "uiScale" then
+    for _, option in ipairs(config.settings.uiScaleOptions) do
+      if option == value then
+        s.settings.uiScale = value
+        return
+      end
+    end
   elseif key == "reminder" then
     local valid = false
     for _, option in ipairs(config.settings.reminderOptions) do
@@ -825,6 +910,147 @@ function state.setSetting(s, key, value)
       s.settings.dailyCap = value
     end
   end
+end
+
+function state.metric(s, key)
+  if key == "hatched" then
+    return (s.stats and s.stats.hatched) or 0
+  elseif key == "opened" then
+    return (s.stats and s.stats.opened) or 0
+  elseif key == "crosses" then
+    return (s.stats and s.stats.crosses) or 0
+  elseif key == "mutations" then
+    return (s.stats and s.stats.mutations) or 0
+  elseif key == "released" then
+    return (s.stats and s.stats.released) or 0
+  elseif key == "prestiges" then
+    return (s.stats and s.stats.prestiges) or 0
+  elseif key == "dinodex" then
+    return (s.dinodex and s.dinodex.total) or 0
+  elseif key == "legendaries" then
+    return (s.stats and s.stats.byRarity and s.stats.byRarity.legendary) or 0
+  elseif key == "decorations" then
+    local count = 0
+    for _, key2 in ipairs(config.habitatOrder) do
+      if s.habitats and s.habitats[key2] and s.habitats[key2].decor then
+        count = count + 1
+      end
+    end
+    return count
+  elseif key == "treeNodes" then
+    local count = 0
+    for _, level in pairs((s.prestige and s.prestige.tree) or {}) do
+      count = count + (level or 0)
+    end
+    return count
+  elseif key == "habitatsFull" then
+    local count = 0
+    for _, habitat in ipairs(config.habitatOrder) do
+      if #state.habitatResidents(s, habitat) >= config.habitats[habitat].capacity then
+        count = count + 1
+      end
+    end
+    return count
+  end
+  return 0
+end
+
+function state.grantReward(s, reward)
+  if not reward then
+    return nil
+  end
+  local parts = {}
+  if reward.amber then
+    s.amber = (s.amber or 0) + reward.amber
+    parts[#parts + 1] = "+" .. reward.amber .. " ámbar"
+  end
+  if reward.essence then
+    s.essence = (s.essence or 0) + reward.essence
+    parts[#parts + 1] = "+" .. reward.essence .. " esencia"
+  end
+  if reward.points then
+    s.prestige.points = (s.prestige.points or 0) + reward.points
+    parts[#parts + 1] = "+" .. reward.points .. " pts de legado"
+  end
+  return table.concat(parts, " · ")
+end
+
+function state.evaluateGoals(s)
+  local events = {}
+  s.achievements = s.achievements or { unlocked = {} }
+  s.achievements.unlocked = s.achievements.unlocked or {}
+  s.goals = s.goals or { active = {}, completed = {} }
+  s.goals.active = s.goals.active or {}
+  s.goals.completed = s.goals.completed or {}
+
+  for _, id in ipairs(config.achievementOrder) do
+    local def = config.achievements[id]
+    if def and not s.achievements.unlocked[id] and state.metric(s, def.metric) >= def.target then
+      s.achievements.unlocked[id] = true
+      local reward = state.grantReward(s, def.reward)
+      events[#events + 1] = {
+        kind = "achievement",
+        name = def.name,
+        reward = reward,
+      }
+    end
+  end
+
+  local function isActive(id)
+    for _, entry in ipairs(s.goals.active) do
+      if entry.id == id then
+        return true
+      end
+    end
+    return false
+  end
+
+  local function addObjective()
+    for _, id in ipairs(config.objectiveOrder) do
+      if not s.goals.completed[id] and not isActive(id) then
+        local def = config.objectives[id]
+        s.goals.active[#s.goals.active + 1] = {
+          id = id,
+          start = state.metric(s, def.metric),
+        }
+        return true
+      end
+    end
+    return false
+  end
+
+  while #s.goals.active > 3 do
+    table.remove(s.goals.active)
+  end
+  while #s.goals.active < 3 do
+    if not addObjective() then
+      break
+    end
+  end
+
+  for index = #s.goals.active, 1, -1 do
+    local entry = s.goals.active[index]
+    local def = config.objectives[entry.id]
+    if not def then
+      table.remove(s.goals.active, index)
+    elseif state.metric(s, def.metric) - (entry.start or 0) >= def.target then
+      s.goals.completed[entry.id] = true
+      local reward = state.grantReward(s, def.reward)
+      events[#events + 1] = {
+        kind = "objective",
+        name = def.name,
+        reward = reward,
+      }
+      table.remove(s.goals.active, index)
+    end
+  end
+  while #s.goals.active < 3 do
+    if not addObjective() then
+      break
+    end
+  end
+
+  return events
 end
 
 function state.update(s, now)
@@ -952,11 +1178,28 @@ function state.normalize(s)
       s.settings[key] = value
     end
   end
+  s.settings.musicVolume = math.max(0, math.min(100, math.floor((tonumber(s.settings.musicVolume) or defaults.musicVolume) + 0.5)))
+  s.settings.sfxVolume = math.max(0, math.min(100, math.floor((tonumber(s.settings.sfxVolume) or defaults.sfxVolume) + 0.5)))
+  s.settings.colorblind = not not s.settings.colorblind
+  s.settings.largeText = not not s.settings.largeText
+  s.settings.fullscreen = not not s.settings.fullscreen
+  local scaleValid = false
+  for _, option in ipairs(config.settings.uiScaleOptions) do
+    if s.settings.uiScale == option then
+      scaleValid = true
+    end
+  end
+  if not scaleValid then
+    s.settings.uiScale = defaults.uiScale
+  end
 
   s.stats = s.stats or {}
+  if s.stats.opened == nil then
+    s.stats.opened = math.max(0, (s.stats.hatched or 0) - #(s.pendingReveals or {}))
+  end
   local statsDefaults = {
-    hatched = 0, nestHatched = 0, crossHatched = 0,
-    mutations = 0, guaranteedRare = 0, guaranteedLegendary = 0,
+    hatched = 0, opened = 0, nestHatched = 0, crossHatched = 0,
+    crosses = 0, mutations = 0, guaranteedRare = 0, guaranteedLegendary = 0,
     guaranteedMutation = 0, released = 0, amberEarned = 0, prestiges = 0,
   }
   for key, value in pairs(statsDefaults) do
@@ -1018,6 +1261,25 @@ function state.normalize(s)
     s.habitats[key] = s.habitats[key] or {}
     s.habitats[key].decor = not not s.habitats[key].decor
   end
+
+  s.achievements = s.achievements or { unlocked = {} }
+  s.achievements.unlocked = s.achievements.unlocked or {}
+  s.goals = s.goals or { active = {}, completed = {} }
+  s.goals.active = s.goals.active or {}
+  s.goals.completed = s.goals.completed or {}
+  local activeGoals = {}
+  local seenGoals = {}
+  for _, entry in ipairs(s.goals.active) do
+    local def = config.objectives[entry.id]
+    if def and not s.goals.completed[entry.id] and not seenGoals[entry.id] then
+      seenGoals[entry.id] = true
+      activeGoals[#activeGoals + 1] = {
+        id = entry.id,
+        start = tonumber(entry.start) or state.metric(s, def.metric),
+      }
+    end
+  end
+  s.goals.active = activeGoals
 
   s.meta = s.meta or {}
   if s.meta.firstRun == nil then

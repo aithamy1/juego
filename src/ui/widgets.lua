@@ -239,6 +239,42 @@ function widgets.toggle(app, x, y, w, h, label, value, onToggle, opts)
   love.graphics.rectangle("fill", value and (px + 22) or (px + 4), py + 3, 14, 14)
 end
 
+function widgets.slider(app, x, y, w, h, label, value, onChange, opts)
+  opts = opts or {}
+  value = clamp(tonumber(value) or 0, 0, 100)
+  local hover = widgets.hover(app, x, y, w, h)
+  local clicked = widgets.click(app, x, y, w, h)
+  if hover then
+    app.mouse.hand = true
+    if opts.tooltip then
+      app.tooltip = opts.tooltip
+    end
+  end
+  local trackX = x + 4
+  local trackY = y + h - 9
+  local trackW = w - 8
+  if (hover and app.mouse.down) or clicked then
+    local nextValue = clamp((app.mouse.x - trackX) / trackW * 100, 0, 100)
+    nextValue = math.floor(nextValue + 0.5)
+    if onChange and nextValue ~= value then
+      onChange(nextValue)
+      value = nextValue
+    end
+  end
+  theme.setFont(9)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.print(label, x + 2, y)
+  theme.setFont(9)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.printf(math.floor(value + 0.5) .. " %", x + w - 58, y, 56, "right")
+  theme.setColor(theme.colors.bg, 1)
+  love.graphics.rectangle("fill", trackX, trackY, trackW, 5)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.rectangle("fill", trackX, trackY, trackW * value / 100, 5)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.rectangle("fill", trackX + trackW * value / 100 - 3, trackY - 3, 6, 11)
+end
+
 function widgets.scroll(app, id, x, y, w, h, contentHeight, drawFn)
   local offset = app.scroll[id] or 0
   local maxOffset = math.max(0, contentHeight - h)

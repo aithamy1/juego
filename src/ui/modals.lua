@@ -76,7 +76,7 @@ local function drawHelp(app, modal)
   love.graphics.print("Atajos", x + 28, y + 330)
   theme.setFont(11)
   theme.setColor(theme.colors.textDim, 1)
-  love.graphics.printf("1–7 cambian de pestaña · Esc cierra paneles · Espacio salta la animación de apertura · Rueda del ratón para desplazar listas.",
+  love.graphics.printf("1–7 cambian de pestaña · Esc cierra paneles · Espacio salta la animación de apertura · Rueda del ratón para desplazar listas. En el Criadero, el botón F protege un ejemplar y VS abre la comparación. El trofeo de la cabecera abre objetivos y logros.",
     x + 28, y + 354, 784, "left")
 
   theme.setFont(13)
@@ -84,7 +84,7 @@ local function drawHelp(app, modal)
   love.graphics.print("Tu ritmo", x + 28, y + 432)
   theme.setFont(11)
   theme.setColor(theme.colors.textDim, 1)
-  love.graphics.printf("En Ajustes puedes activar el modo tranquilo, un recordatorio opcional cada 60 o 90 minutos y un tope diario de huevos. El juego sigue funcionando sin conexión y guarda el progreso hasta 8 horas de ausencia.",
+  love.graphics.printf("En Ajustes puedes activar el modo tranquilo, un recordatorio opcional cada 60 o 90 minutos y un tope diario de huevos. En Opciones ajustas volumen, accesibilidad, mando, copias de seguridad y liberación de duplicados. El juego sigue funcionando sin conexión y guarda el progreso hasta 8 horas de ausencia.",
     x + 28, y + 456, 784, "left")
 
   closeButton(app, x + 660, y + 540, 152, 36, "Entendido")
@@ -1130,6 +1130,426 @@ local function drawPrestigeTree(app, modal)
   closeButton(app, x + 760, y + 560, 150, 36, "Cerrar")
 end
 
+local function drawOptions(app, modal)
+  local game = app.game
+  local x, y = widgets.modalFrame(app, "Opciones",
+    "Audio, accesibilidad, mando y copias de seguridad.", 1000, 620)
+  local columns = { x + 30, x + 350, x + 670 }
+  local colW = 300
+  local top = y + 100
+
+  theme.panel(columns[1], top, colW, 420, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.border,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.setFont(12)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("Audio", columns[1] + 12, top + 10)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Volumen independiente.", columns[1] + 12, top + 28)
+  widgets.toggle(app, columns[1] + 12, top + 48, colW - 24, 30, "Música",
+    game.settings.music, function(value)
+      stateModule.setSetting(game, "music", value)
+      app:toast(value and "Música activada." or "Música silenciada.", theme.colors.textDim)
+    end, { tooltip = "Silenciar o activar la música." })
+  widgets.slider(app, columns[1] + 12, top + 82, colW - 24, 32, "Volumen de música",
+    game.settings.musicVolume, function(value)
+      stateModule.setSetting(game, "musicVolume", value)
+    end, { tooltip = "Arrastra o pulsa para ajustar." })
+  widgets.toggle(app, columns[1] + 12, top + 126, colW - 24, 30, "Efectos",
+    game.settings.sfx, function(value)
+      stateModule.setSetting(game, "sfx", value)
+      app:toast(value and "Efectos activados." or "Efectos silenciados.", theme.colors.textDim)
+    end, { tooltip = "Crujidos y eclosión." })
+  widgets.slider(app, columns[1] + 12, top + 160, colW - 24, 32, "Volumen de efectos",
+    game.settings.sfxVolume, function(value)
+      stateModule.setSetting(game, "sfxVolume", value)
+    end, { tooltip = "Arrastra o pulsa para ajustar." })
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("La música baja de volumen durante la eclosión.",
+    columns[1] + 12, top + 206, colW - 24, "left")
+
+  theme.panel(columns[2], top, colW, 420, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.border,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.setFont(12)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("Pantalla y accesibilidad", columns[2] + 12, top + 10)
+  widgets.toggle(app, columns[2] + 12, top + 46, colW - 24, 30, "Modo daltónico",
+    game.settings.colorblind, function(value)
+      stateModule.setSetting(game, "colorblind", value)
+      theme.setColorblind(value)
+      app:toast(value and "Modo daltónico activado." or "Colores estándar.", theme.colors.textDim)
+    end, { tooltip = "Usa una paleta de alto contraste para las rarezas." })
+  widgets.toggle(app, columns[2] + 12, top + 80, colW - 24, 30, "Texto grande",
+    game.settings.largeText, function(value)
+      stateModule.setSetting(game, "largeText", value)
+      theme.setLargeText(value)
+      app:toast(value and "Texto grande activado." or "Texto normal.", theme.colors.textDim)
+    end, { tooltip = "Aumenta un punto las etiquetas pequeñas." })
+  local scaleOptions = {}
+  for _, value in ipairs(config.settings.uiScaleOptions) do
+    scaleOptions[#scaleOptions + 1] = {
+      value = value,
+      label = math.floor(value * 100) .. " %",
+    }
+  end
+  widgets.cycle(app, columns[2] + 12, top + 120, colW - 24, 40, "Escala de ventana",
+    game.settings.uiScale, scaleOptions, function(value)
+      stateModule.setSetting(game, "uiScale", value)
+      app.displayDirty = true
+      app:toast("Escala de ventana: " .. math.floor(value * 100) .. " %.", theme.colors.textDim)
+    end, { tooltip = "El lienzo se adapta a la ventana." })
+  widgets.toggle(app, columns[2] + 12, top + 172, colW - 24, 30, "Pantalla completa",
+    game.settings.fullscreen, function(value)
+      stateModule.setSetting(game, "fullscreen", value)
+      app.displayDirty = true
+      app:toast(value and "Pantalla completa." or "Modo ventana.", theme.colors.textDim)
+    end, { tooltip = "Usa el escritorio completo." })
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("La escala se limita al tamaño del escritorio. Mando: stick izquierdo mueve el cursor; A pulsa; B vuelve; LB/RB cambian de pestaña; Start guarda.",
+    columns[2] + 12, top + 210, colW - 24, "left")
+
+  theme.panel(columns[3], top, colW, 420, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.border,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.setFont(12)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("Datos y criadero", columns[3] + 12, top + 10)
+  widgets.button(app, columns[3] + 12, top + 44, colW - 24, 34, "GUARDAR COPIA", {
+    style = "secondary",
+    font = 9,
+    tooltip = "Crea save-backup.json junto a la partida.",
+    onClick = function()
+      app:backupSave()
+    end,
+  })
+  local hasBackup = love.filesystem.getInfo("save-backup.json") ~= nil
+  widgets.button(app, columns[3] + 12, top + 86, colW - 24, 34, "RESTAURAR COPIA", {
+    style = "secondary",
+    font = 9,
+    disabled = not hasBackup,
+    tooltip = hasBackup and "Sustituye la partida actual por la copia." or "Todavía no hay copia.",
+    onClick = function()
+      app:openModal("restore_backup", {})
+    end,
+  })
+  theme.setFont(7)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf(hasBackup and "Copia disponible: save-backup.json." or "Sin copia guardada todavía.",
+    columns[3] + 12, top + 126, colW - 24, "left")
+  local plan = stateModule.duplicatePlan(game)
+  widgets.button(app, columns[3] + 12, top + 158, colW - 24, 34, "LIBERAR DUPLICADOS", {
+    style = "ghost",
+    font = 8,
+    disabled = #plan == 0,
+    tooltip = #plan > 0 and ("Revisa antes de liberar " .. #plan .. " ejemplares.") or "No hay duplicados que liberar.",
+    onClick = function()
+      app:openModal("bulk_release", {})
+    end,
+  })
+  theme.setFont(7)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Nunca libera favoritos, residentes de hábitats, ejemplares en cruce ni huevos pendientes.",
+    columns[3] + 12, top + 198, colW - 24, "left")
+  widgets.button(app, columns[3] + 12, top + 230, colW - 24, 34, "OBJETIVOS Y LOGROS", {
+    style = "teal",
+    font = 8,
+    onClick = function()
+      app:openModal("goals", {})
+    end,
+  })
+  theme.setFont(7)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Los objetivos se renuevan al completarse. Los logros son permanentes.",
+    columns[3] + 12, top + 270, colW - 24, "left")
+
+  closeButton(app, x + 810, y + 550, 150, 36, "Cerrar")
+end
+
+local function drawRestoreBackup(app, modal)
+  local x, y = widgets.modalFrame(app, "Restaurar copia",
+    "Se sustituirá la partida actual por save-backup.json. Esta acción no se puede deshacer.", 720, 360, {
+      borderColor = theme.colors.red,
+    })
+  theme.setFont(11)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf("La partida actual se sobrescribirá y el juego se reiniciará. La copia debe ser válida; si no lo es, no se tocará nada.",
+    x + 30, y + 100, 660, "left")
+  widgets.button(app, x + 30, y + 210, 300, 44, "Cancelar", {
+    style = "secondary",
+    font = 11,
+    onClick = function()
+      app:closeModal()
+    end,
+  })
+  widgets.button(app, x + 390, y + 210, 300, 44, "Restaurar y reiniciar", {
+    style = "danger",
+    font = 10,
+    onClick = function()
+      app:restoreBackup()
+    end,
+  })
+end
+
+local function drawBulkRelease(app, modal)
+  local game = app.game
+  local plan, essence = stateModule.duplicatePlan(game)
+  local x, y = widgets.modalFrame(app, "Liberar duplicados",
+    "Se liberarán copias repetidas de la misma especie, rareza, genes y mutación. Se conserva la de mayor producción.", 760, 420, {
+      borderColor = theme.colors.red,
+    })
+  theme.setFont(13)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print("Ejemplares a liberar: " .. #plan, x + 30, y + 100)
+  theme.setFont(13)
+  theme.setColor(theme.colors.essence, 1)
+  love.graphics.print("Esencia recuperada: +" .. essence, x + 30, y + 126)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("No se liberan favoritos, residentes de hábitats, ejemplares en cruce ni dinosaurios pendientes de abrir. Si no hay duplicados, la acción no hace nada.",
+    x + 30, y + 160, 700, "left")
+  widgets.button(app, x + 30, y + 260, 330, 44, "Cancelar", {
+    style = "secondary",
+    font = 11,
+    onClick = function()
+      app:closeModal()
+    end,
+  })
+  widgets.button(app, x + 390, y + 260, 340, 44, "Liberar " .. #plan .. " duplicados", {
+    style = "danger",
+    font = 10,
+    disabled = #plan == 0,
+    onClick = function()
+      local count, total = stateModule.releaseDuplicates(game)
+      app.selectedDino = nil
+      app:toast("Liberados " .. count .. " duplicados. +" .. total .. " esencia.", theme.colors.essence)
+      app:closeModal()
+    end,
+  })
+end
+
+local function drawGoals(app, modal)
+  local game = app.game
+  local x, y = widgets.modalFrame(app, "Objetivos y logros",
+    "Los objetivos rotan al completarse. Los logros son permanentes y se guardan con la partida.", 1000, 620)
+  theme.setFont(12)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("OBJETIVOS", x + 30, y + 92)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  local completed = 0
+  for _ in pairs(game.goals.completed) do
+    completed = completed + 1
+  end
+  love.graphics.printf(completed .. " / " .. #config.objectiveOrder .. " completados", x + 30, y + 108, 430, "right")
+
+  local cardY = y + 126
+  local objectiveRows = math.max(1, #game.goals.active)
+  for index = 1, objectiveRows do
+    local entry = game.goals.active[index]
+    local def = entry and config.objectives[entry.id] or nil
+    theme.panel(x + 30, cardY, 430, 100, {
+      color = theme.colors.panel2,
+      borderColor = def and theme.colors.border or theme.colors.borderSoft,
+      shadowSize = 2,
+      borderWidth = 1,
+    })
+    if def then
+      local current = stateModule.metric(game, def.metric) - (entry.start or 0)
+      local progress = math.max(0, math.min(1, current / def.target))
+      theme.setFont(11)
+      theme.setColor(theme.colors.text, 1)
+      love.graphics.print(def.name, x + 42, cardY + 10)
+      theme.setFont(8)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.print(def.desc, x + 42, cardY + 28)
+      widgets.progressBar(x + 42, cardY + 48, 406, 7, progress, theme.colors.gold, {})
+      theme.setFont(8)
+      theme.setColor(theme.colors.textDim, 1)
+      love.graphics.print(math.min(def.target, math.max(0, current)) .. " / " .. def.target,
+        x + 42, cardY + 61)
+      local reward = {}
+      if def.reward.amber then reward[#reward + 1] = "+" .. def.reward.amber .. " ámbar" end
+      if def.reward.essence then reward[#reward + 1] = "+" .. def.reward.essence .. " esencia" end
+      if def.reward.points then reward[#reward + 1] = "+" .. def.reward.points .. " pts" end
+      theme.setColor(theme.colors.green, 1)
+      love.graphics.print(table.concat(reward, " · "), x + 42, cardY + 78)
+    else
+      theme.setFont(11)
+      theme.setColor(theme.colors.green, 1)
+      love.graphics.printf("Todos los objetivos completados.", x + 42, cardY + 36, 406, "left")
+    end
+    cardY = cardY + 112
+  end
+
+  theme.setFont(12)
+  theme.setColor(theme.colors.gold, 1)
+  love.graphics.print("LOGROS", x + 490, y + 92)
+  local unlocked = 0
+  for _ in pairs(game.achievements.unlocked) do
+    unlocked = unlocked + 1
+  end
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf(unlocked .. " / " .. #config.achievementOrder, x + 490, y + 108, 460, "right")
+  local rowH = 50
+  local contentH = #config.achievementOrder * rowH
+  widgets.scroll(app, "goals_achievements", x + 490, y + 126, 480, 430, contentH, function(offset)
+    for index, id in ipairs(config.achievementOrder) do
+      local def = config.achievements[id]
+      local ry = y + 126 + (index - 1) * rowH - offset
+      if ry + rowH >= y + 126 and ry <= y + 550 then
+        local done = game.achievements.unlocked[id]
+        local value = stateModule.metric(game, def.metric)
+        local progress = math.max(0, math.min(1, value / def.target))
+        theme.panel(x + 490, ry + 2, 480, rowH - 4, {
+          color = done and theme.colors.panel2 or theme.colors.panel,
+          borderColor = done and theme.colors.green or theme.colors.borderSoft,
+          shadow = false,
+          borderWidth = 1,
+        })
+        theme.setFont(9)
+        theme.setColor(done and theme.colors.green or theme.colors.text, 1)
+        love.graphics.print((done and "OK " or "· ") .. def.name, x + 500, ry + 7)
+        theme.setFont(7)
+        theme.setColor(theme.colors.muted, 1)
+        love.graphics.print(def.desc, x + 500, ry + 22)
+        widgets.progressBar(x + 500, ry + 35, 240, 5, progress, done and theme.colors.green or theme.colors.gold, {})
+        theme.setFont(7)
+        theme.setColor(theme.colors.textDim, 1)
+        love.graphics.printf(math.min(def.target, value) .. " / " .. def.target, x + 746, ry + 33, 50, "right")
+        local reward = {}
+        if def.reward.amber then reward[#reward + 1] = "+" .. def.reward.amber .. " ámbar" end
+        if def.reward.essence then reward[#reward + 1] = "+" .. def.reward.essence .. " esencia" end
+        if def.reward.points then reward[#reward + 1] = "+" .. def.reward.points .. " pts" end
+        theme.setColor(theme.colors.green, 1)
+        love.graphics.printf(table.concat(reward, " · "), x + 800, ry + 22, 160, "right")
+      end
+    end
+  end)
+
+  closeButton(app, x + 810, y + 560, 150, 36, "Cerrar")
+end
+
+local function drawCompare(app, modal)
+  local game = app.game
+  local x, y = widgets.modalFrame(app, "Comparar ejemplares",
+    "Elige dos ejemplares para comparar producción, genes, rol y hábitat.", 900, 620)
+  local options = {}
+  for _, dino in ipairs(game.dinos) do
+    if not stateModule.isDinoPending(game, dino.id) then
+      options[#options + 1] = {
+        value = dino.id,
+        label = config.species[dino.species].name .. " #" .. dino.id,
+      }
+    end
+  end
+  table.sort(options, function(a, b)
+    return a.label < b.label
+  end)
+  local function has(value)
+    for _, option in ipairs(options) do
+      if option.value == value then
+        return true
+      end
+    end
+    return false
+  end
+  if not has(app.compareA) then
+    app.compareA = options[1] and options[1].value or nil
+  end
+  if not has(app.compareB) or app.compareB == app.compareA then
+    app.compareB = options[2] and options[2].value or options[1] and options[1].value or nil
+  end
+
+  if #options == 0 then
+    widgets.emptyState(x + 30, y + 120, 840, 180, "No hay ejemplares visibles",
+      "Abre algún huevo para poder comparar.")
+    closeButton(app, x + 720, y + 560, 150, 36, "Cerrar")
+    return
+  end
+
+  local function drawColumn(dinoId, columnX, columnY, label, onChange)
+    theme.panel(columnX, columnY, 400, 430, {
+      color = theme.colors.panel2,
+      borderColor = theme.colors.border,
+      shadowSize = 3,
+      borderWidth = 2,
+    })
+    widgets.cycle(app, columnX + 12, columnY + 10, 376, 40, label, dinoId, options, onChange)
+    local dino = stateModule.findDino(game, dinoId)
+    if not dino then
+      return
+    end
+    render.drawDino(dino, columnX + 200, columnY + 150, 0.62, {})
+    if dino.favorite then
+      theme.setFont(8)
+      theme.setColor(theme.colors.gold, 1)
+      love.graphics.print("FAV", columnX + 352, columnY + 58)
+    end
+    theme.setFont(14)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.printf(config.species[dino.species].name, columnX, columnY + 166, 400, "center")
+    local chipW = widgets.rarityChip(columnX + 12, columnY + 190, dino.rarity, true)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    local role = dino.role and config.roles[dino.role].name or "Sin rol"
+    local habitat = dino.habitat and config.habitats[dino.habitat].short or "Sin hábitat"
+    love.graphics.print(role .. " · " .. habitat, columnX + 18 + chipW, columnY + 194)
+    theme.setFont(9)
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.printf("+" .. theme.fmtRate(economy.dinoRate(dino, game)) .. "/s", columnX + 200, columnY + 210, 188, "right")
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print("Patrón", columnX + 12, columnY + 236)
+    love.graphics.print("Color", columnX + 12, columnY + 252)
+    love.graphics.print("Secundario", columnX + 12, columnY + 268)
+    love.graphics.print("Cresta", columnX + 12, columnY + 284)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.print(config.patterns[dino.genes.pattern].name, columnX + 118, columnY + 236)
+    love.graphics.print(config.colors[dino.genes.primaryColor].name, columnX + 118, columnY + 252)
+    love.graphics.print(config.secondaryColors[dino.genes.secondaryColor].name, columnX + 118, columnY + 268)
+    love.graphics.print(config.crests[dino.genes.crest].name, columnX + 118, columnY + 284)
+    if dino.mutation then
+      theme.setColor(theme.colors.purple, 1)
+      love.graphics.print(config.mutations[dino.mutation].name, columnX + 260, columnY + 236)
+    end
+    theme.setFont(8)
+    theme.setColor(theme.colors.gold, 1)
+    love.graphics.print("GENES FUNCIONALES", columnX + 12, columnY + 306)
+    for index, gene in ipairs(config.functionalOrder) do
+      local value = (dino.functional and dino.functional[gene]) or 1
+      local geneY = columnY + 320 + (index - 1) * 14
+      theme.setFont(8)
+      theme.setColor(theme.colors.textDim, 1)
+      love.graphics.print(config.functional[gene].short, columnX + 12, geneY)
+      widgets.progressBar(columnX + 46, geneY + 3, 280, 5, value / 5, theme.colors.green, {})
+      theme.setColor(theme.colors.text, 1)
+      love.graphics.print(tostring(value), columnX + 334, geneY)
+    end
+  end
+
+  drawColumn(app.compareA, x + 30, y + 100, "Ejemplar A", function(value)
+    app.compareA = value
+  end)
+  drawColumn(app.compareB, x + 470, y + 100, "Ejemplar B", function(value)
+    app.compareB = value
+  end)
+  closeButton(app, x + 720, y + 560, 150, 36, "Cerrar")
+end
+
 function modals.draw(app, modal)
   local handlers = {
     help = drawHelp,
@@ -1142,6 +1562,11 @@ function modals.draw(app, modal)
     prestige = drawPrestige,
     habitats = drawHabitats,
     prestige_tree = drawPrestigeTree,
+    options = drawOptions,
+    restore_backup = drawRestoreBackup,
+    bulk_release = drawBulkRelease,
+    goals = drawGoals,
+    compare = drawCompare,
   }
   local handler = handlers[modal.kind]
   if handler then

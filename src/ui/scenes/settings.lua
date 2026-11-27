@@ -107,17 +107,25 @@ function settings.draw(app)
     end,
   })
 
-  widgets.button(app, x + 12, y + 338, 150, 32, "GUARDAR AHORA", {
+  widgets.button(app, x + 12, y + 338, 96, 32, "GUARDAR AHORA", {
     style = "secondary",
-    font = 8,
+    font = 7,
     onClick = function()
       app:save()
       app:toast("Partida guardada.", theme.colors.green)
     end,
   })
-  widgets.button(app, x + 174, y + 338, 164, 32, "CÓMO SE JUEGA", {
+  widgets.button(app, x + 116, y + 338, 110, 32, "OPCIONES", {
     style = "ghost",
     font = 8,
+    tooltip = "Audio, accesibilidad, mando y copias.",
+    onClick = function()
+      app:openModal("options", {})
+    end,
+  })
+  widgets.button(app, x + 234, y + 338, 104, 32, "CÓMO SE JUEGA", {
+    style = "ghost",
+    font = 7,
     onClick = function()
       app:openModal("help", {})
     end,

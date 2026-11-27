@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "2.0.0"
+config.version = "2.1.0"
 config.saveVersion = 1
 
 config.window = {
@@ -478,10 +478,203 @@ config.dinodex = {
 config.settings = {
   reminderOptions = { 0, 60, 90 },
   dailyCapOptions = { 0, 25, 50, 100, 200 },
+  uiScaleOptions = { 1, 1.25, 1.5 },
   defaultReminder = 0,
   defaultDailyCap = 0,
   defaultMusic = true,
   defaultSfx = true,
+  defaultMusicVolume = 100,
+  defaultSfxVolume = 100,
+  defaultColorblind = false,
+  defaultLargeText = false,
+  defaultFullscreen = false,
+  defaultUiScale = 1,
+}
+
+config.achievementOrder = {
+  "primer_huevo",
+  "criador",
+  "veterano",
+  "primer_cruce",
+  "cruces_10",
+  "primera_mutacion",
+  "mutaciones_5",
+  "primer_legendario",
+  "coleccionista",
+  "explorador_genetico",
+  "decorador",
+  "habitats_llenos",
+  "legado",
+  "migracion",
+}
+config.achievements = {
+  primer_huevo = {
+    name = "Primer latido",
+    desc = "Abre tu primer huevo.",
+    metric = "opened",
+    target = 1,
+    reward = { amber = 25 },
+  },
+  criador = {
+    name = "Criador constante",
+    desc = "Abre 10 huevos.",
+    metric = "opened",
+    target = 10,
+    reward = { amber = 80 },
+  },
+  veterano = {
+    name = "Veterano de cáscara",
+    desc = "Abre 50 huevos.",
+    metric = "opened",
+    target = 50,
+    reward = { essence = 10 },
+  },
+  primer_cruce = {
+    name = "Primera mezcla",
+    desc = "Completa un cruce.",
+    metric = "crosses",
+    target = 1,
+    reward = { amber = 50 },
+  },
+  cruces_10 = {
+    name = "Laboratorio de campo",
+    desc = "Completa 10 cruces.",
+    metric = "crosses",
+    target = 10,
+    reward = { essence = 10 },
+  },
+  primera_mutacion = {
+    name = "Cambio inesperado",
+    desc = "Descubre una mutación.",
+    metric = "mutations",
+    target = 1,
+    reward = { amber = 60 },
+  },
+  mutaciones_5 = {
+    name = "Colección extraña",
+    desc = "Descubre 5 mutaciones.",
+    metric = "mutations",
+    target = 5,
+    reward = { essence = 15 },
+  },
+  primer_legendario = {
+    name = "Leyenda del nido",
+    desc = "Obtén un ejemplar legendario.",
+    metric = "legendaries",
+    target = 1,
+    reward = { points = 10 },
+  },
+  coleccionista = {
+    name = "Coleccionista",
+    desc = "Registra 25 variantes en el Dinodex.",
+    metric = "dinodex",
+    target = 25,
+    reward = { essence = 15 },
+  },
+  explorador_genetico = {
+    name = "Explorador genético",
+    desc = "Registra 100 variantes en el Dinodex.",
+    metric = "dinodex",
+    target = 100,
+    reward = { amber = 300, essence = 10 },
+  },
+  decorador = {
+    name = "Decorador de biomas",
+    desc = "Compra 2 decoraciones.",
+    metric = "decorations",
+    target = 2,
+    reward = { amber = 100 },
+  },
+  habitats_llenos = {
+    name = "Tres ecosistemas",
+    desc = "Llena los tres hábitats.",
+    metric = "habitatsFull",
+    target = 3,
+    reward = { essence = 20 },
+  },
+  legado = {
+    name = "Raíces profundas",
+    desc = "Compra 3 nodos del árbol de legado.",
+    metric = "treeNodes",
+    target = 3,
+    reward = { points = 10 },
+  },
+  migracion = {
+    name = "Otra era",
+    desc = "Completa una Gran Migración.",
+    metric = "prestiges",
+    target = 1,
+    reward = { points = 15 },
+  },
+}
+
+config.objectiveOrder = {
+  "abre_5",
+  "abre_15",
+  "cruza_2",
+  "descubre_5",
+  "libera_5",
+  "compra_decoracion",
+  "llena_habitat",
+  "sube_arbol",
+}
+config.objectives = {
+  abre_5 = {
+    name = "Cinco cáscaras",
+    desc = "Abre 5 huevos.",
+    metric = "opened",
+    target = 5,
+    reward = { amber = 50 },
+  },
+  abre_15 = {
+    name = "Ritmo de nido",
+    desc = "Abre 15 huevos.",
+    metric = "opened",
+    target = 15,
+    reward = { amber = 140 },
+  },
+  cruza_2 = {
+    name = "Dos mezclas",
+    desc = "Completa 2 cruces.",
+    metric = "crosses",
+    target = 2,
+    reward = { amber = 60, essence = 2 },
+  },
+  descubre_5 = {
+    name = "Cinco variantes",
+    desc = "Registra 5 variantes nuevas en el Dinodex.",
+    metric = "dinodex",
+    target = 5,
+    reward = { essence = 4 },
+  },
+  libera_5 = {
+    name = "Espacio para crecer",
+    desc = "Libera 5 ejemplares.",
+    metric = "released",
+    target = 5,
+    reward = { essence = 3 },
+  },
+  compra_decoracion = {
+    name = "Un toque personal",
+    desc = "Compra una decoración.",
+    metric = "decorations",
+    target = 1,
+    reward = { amber = 80 },
+  },
+  llena_habitat = {
+    name = "Hábitat completo",
+    desc = "Llena un hábitat con 3 residentes.",
+    metric = "habitatsFull",
+    target = 1,
+    reward = { amber = 70 },
+  },
+  sube_arbol = {
+    name = "Una rama más",
+    desc = "Compra un nodo del árbol de legado.",
+    metric = "treeNodes",
+    target = 1,
+    reward = { amber = 80 },
+  },
 }
 
 config.stats = {

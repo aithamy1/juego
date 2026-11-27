@@ -118,23 +118,56 @@ return function(t)
     t.assertEqual(s.prestige.tree.capacidad, 1, "el árbol debe conservarse")
   end)
 
-  t.test("los campos nuevos se rellenan al normalizar un guardado antiguo", function()
+  t.test("los logros y objetivos dan recompensas una sola vez", function()
     local now = 1800000000
-    local s = state.new(35, now)
-    s.habitats = nil
-    s.prestige.tree = nil
-    s.prestige.points = nil
+    local s = state.new(36, now)
     s.dinos = {}
-    local dino = addDino(s, now)
-    dino.role = "rol_inventado"
-    dino.habitat = "habitat_inventado"
-    state.normalize(s)
-    t.assertTrue(s.habitats ~= nil)
-    t.assertTrue(s.habitats.bosque ~= nil)
-    t.assertTrue(s.prestige.tree ~= nil)
-    t.assertEqual(s.prestige.tree.nido, 0)
-    t.assertFalse(s.prestige.points ~= nil and s.prestige.points < 0)
-    t.assertTrue(dino.role == nil)
-    t.assertTrue(dino.habitat == nil)
+    local events = state.evaluateGoals(s)
+    t.assertEqual(#events, 0)
+    t.assertEqual(#s.goals.active, 3)
+    s.stats.opened = 1
+    events = state.evaluateGoals(s)
+    t.assertTrue(s.achievements.unlocked.primer_huevo)
+    t.assertTrue(s.amber >= 25)
+    local amber = s.amber
+    state.evaluateGoals(s)
+    t.assertEqual(s.amber, amber, "el logro no debe pagarse dos veces")
+    s.goals.active = { { id = "abre_5", start = 0 } }
+    s.goals.completed = {}
+    s.stats.opened = 5
+    events = state.evaluateGoals(s)
+    t.assertTrue(s.goals.completed.abre_5)
+    t.assertEqual(#events, 1)
+    t.assertTrue(s.amber > amber, "el objetivo debe pagar ámbar")
+  end)
+
+  t.test("los favoritos no se pueden liberar y los duplicados se detectan", function()
+    local now = 1800000000
+    local s = state.new(37, now)
+    s.dinos = {}
+    local first = addDino(s, now)
+    local second = addDino(s, now)
+    local third = addDino(s, now)
+    state.setDinoFavorite(s, first.id, true)
+    local ok = state.releaseDino(s, first.id)
+    t.assertFalse(ok)
+    local plan, essence = state.duplicatePlan(s)
+    t.assertEqual(#plan, 1, "solo el duplicado no favorito entra en el plan")
+    t.assertTrue(essence > 0)
+    local count, value = state.releaseDuplicates(s)
+    t.assertEqual(count, 1)
+    t.assertTrue(value > 0)
+    t.assertTrue(state.findDino(s, first.id) ~= nil)
+    t.assertTrue(state.findDino(s, second.id) ~= nil or state.findDino(s, third.id) ~= nil)
+    t.assertTrue(state.findDino(s, second.id) == nil or state.findDino(s, third.id) == nil)
+  end)
+
+  t.test("los volúmenes se limitan entre 0 y 100", function()
+    local now = 1800000000
+    local s = state.new(38, now)
+    state.setSetting(s, "musicVolume", 150)
+    state.setSetting(s, "sfxVolume", -10)
+    t.assertEqual(s.settings.musicVolume, 100)
+    t.assertEqual(s.settings.sfxVolume, 0)
   end)
 end

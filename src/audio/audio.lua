@@ -343,7 +343,15 @@ function audio.update(dt, settings)
     duckGain = duckGain + (1 - duckGain) * math.min(1, dt * 1.6)
   end
 
-  musicSource:setVolume(MUSIC_VOLUME * musicGain * duckGain)
+  local musicScale = (settings.musicVolume or 100) / 100
+  local sfxScale = (settings.sfxVolume or 100) / 100
+  musicSource:setVolume(MUSIC_VOLUME * musicGain * duckGain * musicScale)
+  if crackSource then
+    crackSource:setVolume(0.72 * sfxScale)
+  end
+  if hatchSource then
+    hatchSource:setVolume(0.85 * sfxScale)
+  end
 end
 
 function audio.playCrack(stage)

@@ -68,6 +68,10 @@ function app.new(game)
   self.game = game
   self.pendingCount = #game.pendingReveals
   self.openingAll = false
+  self.displayDirty = false
+  self.gamepadCursor = false
+  self.compareA = nil
+  self.compareB = nil
   self.scene = "nest"
   self.now = os.time()
   self.mouse = { x = -1, y = -1, hand = false, down = false }
@@ -105,6 +109,20 @@ function app:goto(scene)
     self.scene = scene
     self.tooltip = nil
   end
+end
+
+function app:cycleTab(delta)
+  if self.modal then
+    return
+  end
+  local current = 1
+  for index, tab in ipairs(tabs) do
+    if tab.key == self.scene then
+      current = index
+    end
+  end
+  local nextIndex = ((current - 1 + (delta or 1)) % #tabs) + 1
+  self:goto(tabs[nextIndex].key)
 end
 
 function app:toast(message, color)
@@ -192,9 +210,38 @@ function app:save()
   end
 end
 
+function app:backupSave()
+  if not self.backupCallback then
+    self:toast("No se pudo crear la copia.", theme.colors.red)
+    return
+  end
+  local ok, err = self.backupCallback()
+  if ok then
+    self:toast("Copia guardada como save-backup.json.", theme.colors.green)
+  else
+    self:toast("No se pudo crear la copia: " .. tostring(err), theme.colors.red)
+  end
+end
+
+function app:restoreBackup()
+  if not self.restoreCallback then
+    self:toast("No hay una copia disponible.", theme.colors.red)
+    return
+  end
+  local ok, err = self.restoreCallback()
+  if not ok then
+    self:toast(err or "No se pudo restaurar la copia.", theme.colors.red)
+  end
+end
+
 function app:update(dt, now)
   self.now = now
   stateModule.update(self.game, now)
+  local goalEvents = stateModule.evaluateGoals(self.game)
+  for _, event in ipairs(goalEvents) do
+    local label = event.kind == "achievement" and "Logro" or "Objetivo"
+    self:toast(label .. ": " .. event.name .. (event.reward and (" · " .. event.reward) or ""), theme.colors.gold)
+  end
 
   local crossJob = self.game.cross
   if crossJob then
@@ -293,6 +340,23 @@ function app:drawHeader()
   theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.print("v" .. config.version, 557, 30)
+
+  local trophyX, trophyY = 1168, 10
+  local trophyHover = widgets.hover(self, trophyX, trophyY, 44, 44)
+  if trophyHover then
+    self.tooltip = "Objetivos y logros."
+    self.mouse.hand = true
+  end
+  if widgets.click(self, trophyX, trophyY, 44, 44) then
+    self:openModal("goals", {})
+  end
+  theme.panel(trophyX, trophyY, 44, 44, {
+    color = trophyHover and theme.colors.panel3 or theme.colors.panel2,
+    borderColor = theme.colors.gold,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.drawTrophy(trophyX + 22, trophyY + 22, 11, theme.colors.goldLight)
 
   local gearX, gearY = 1222, 10
   local hover = widgets.hover(self, gearX, gearY, 44, 44)

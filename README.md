@@ -34,6 +34,7 @@ Los tests cubren:
 - Determinismo: misma semilla y mismas acciones producen el mismo estado.
 - Flujo de cruces, prioridad del huevo de cruce, liberación y hitos del Dinodex.
 - Roles, capacidad de hábitats, decoraciones y efectos del árbol de legado.
+- Logros y objetivos con recompensa única, favoritos, duplicados y límites de volumen.
 
 ## Controles
 
@@ -45,6 +46,7 @@ Los tests cubren:
 | `Esc` | Cerrar paneles; en una apertura, saltar la animación |
 | `Espacio` | Saltar la animación de apertura |
 | `F5` | Guardar ahora |
+| Mando | Stick izquierdo mueve el cursor; A pulsa; B vuelve; LB/RB cambian de pestaña; Start guarda |
 
 ## Estructura
 
@@ -80,6 +82,27 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 - **Hábitats**: el botón **HÁBITATS** de la pradera abre el panel de los tres biomas. Cada uno admite 3 residentes. Bosque da +15 % de producción a sus residentes; Volcán da +1 % de peso raro+ por residente adulto (máximo 3 %); Costa reduce la incubación un 2 % por residente adulto (máximo 6 %).
 - **Decoración**: cada hábitat tiene una decoración permanente que se compra con ámbar o esencia. Añade un bonus adicional y cambia el dibujo del bioma.
 - **Árbol de legado**: en Ajustes, el botón **ÁRBOL DE LEGADO** gasta puntos obtenidos al migrar. Tiene seis nodos permanentes: incubadora inicial, producción, suerte, capacidad del nido, incubación y puntos de legado. Los nodos inferiores piden nivel 1 del nodo superior.
+
+## Opciones y calidad de vida
+
+El botón **OPCIONES** de Ajustes abre un panel con:
+
+- **Audio**: volumen independiente de música y efectos, además de los silencios rápidos.
+- **Accesibilidad**: modo daltónico con paleta de alto contraste y texto grande.
+- **Pantalla**: escala de ventana y pantalla completa.
+- **Mando**: cursor virtual con el stick izquierdo, A para pulsar, B para volver, LB/RB para cambiar de pestaña y Start para guardar.
+- **Datos**: guardar una copia en `save-backup.json`, restaurarla con confirmación y liberar duplicados.
+- **Favoritos y comparación**: en la ficha del Criadero, **F** protege un ejemplar de la liberación y **VS** abre la comparación con otro ejemplar.
+
+La liberación de duplicados conserva la copia de mayor producción, no toca favoritos, ejemplares en cruce ni huevos pendientes y pide confirmación.
+
+## Objetivos y logros
+
+El trofeo de la cabecera abre el panel de progreso:
+
+- **Objetivos**: tres tareas activas que se renuevan al completarse. Dan ámbar o esencia. No hay rachas diarias ni castigos por no entrar.
+- **Logros**: 14 hitos permanentes de colección, cruces, mutaciones, hábitats, decoración, legado y migración. Algunos dan puntos para el árbol de legado.
+- Cada recompensa se paga una sola vez y queda guardada con la partida.
 
 ## Audio
 
@@ -124,6 +147,8 @@ Casi todo el balance vive en `src/game/config.lua`:
 - `species`, `patterns`, `colors`, `secondaryColors`, `crests`, `mutations`: contenido y paletas.
 - `roles` y `habitats`: efectos de rol, capacidad y decoraciones de cada bioma.
 - `prestigeTree`: nodos, costes, requisitos y efectos permanentes.
+- `achievements` y `objectives`: hitos, metas, recompensas y métricas.
+- `settings`: volúmenes, accesibilidad, escala de ventana y valores por defecto.
 - `upgrades`: coste base, crecimiento, máximo y efecto de cada mejora.
 - `prestige` y `dinodex`: requisitos, bonus y multiplicadores.
 
@@ -159,6 +184,10 @@ La especificación no fijaba estos detalles; se resolvieron así:
 20. **Roles y hábitats**: asignar rol o hábitat es gratuito y se puede cambiar cuando quieras. Los efectos de incubador y explorador solo cuentan ejemplares adultos; el recolector mejora la producción propia. La capacidad de cada hábitat es 3 y no se amplía.
 21. **Decoración**: cada hábitat tiene una decoración permanente, se compra una vez y no se puede cambiar. Se conserva al migrar.
 22. **Árbol de legado**: los puntos disponibles son independientes del legado total y del multiplicador. Al migrar se suman a ambos; gastarlos no reduce el multiplicador permanente.
+23. **Objetivos y logros**: los objetivos se miden desde que se asignan y rotan al completarse; los logros usan métricas acumuladas. Las recompensas se pagan una vez y se guardan.
+24. **Favoritos y duplicados**: un favorito no se puede liberar hasta quitar la marca. La liberación masiva solo elimina copias repetidas no favoritas y nunca toca cruces ni huevos pendientes.
+25. **Copias de seguridad**: `save-backup.json` vive en la carpeta de guardado de LÖVE. Restaurar valida el JSON, sobrescribe la partida y reinicia el juego.
+26. **Accesibilidad**: el modo daltónico cambia la paleta de rarezas; el texto grande sube un punto las etiquetas de hasta 12 px. La escala de ventana se limita al tamaño del escritorio.
 
 ## Empaquetar un `.love`
 

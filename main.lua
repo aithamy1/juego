@@ -12,6 +12,7 @@ local game
 local autosaveTimer = 0
 local handCursor
 local arrowCursor
+local suppressSaveOnQuit = false
 
 local function scaling()
   local width, height = love.graphics.getDimensions()
@@ -41,6 +42,66 @@ local function newSeed()
   value = value * 100003 + math.floor(love.math.random() * 100000)
   return value % 4294967296
 end
+
+local function clampValue(value, low, high)
+  if value < low then return low end
+  if value > high then return high end
+  return value
+end
+
+local function applyDisplaySettings(settings)
+  local scale = settings.uiScale or 1
+  local targetW = math.floor(config.window.width * scale)
+  local targetH = math.floor(config.window.height * scale)
+  local changed = false
+  local ok = true
+  if settings.fullscreen then
+    if not love.window.getFullscreen() then
+      changed = true
+      ok = pcall(love.window.setFullscreen, true, "desktop")
+    end
+    return changed, ok
+  end
+  if love.window.getFullscreen() then
+    pcall(love.window.setFullscreen, false)
+    changed = true
+  end
+  local desktopW, desktopH = love.window.getDesktopDimensions()
+  if desktopW and desktopH and desktopW > 0 and desktopH > 0 then
+    scale = math.min(scale, desktopW / config.window.width, desktopH / config.window.height)
+    targetW = math.max(960, math.floor(config.window.width * scale))
+    targetH = math.max(540, math.floor(config.window.height * scale))
+  end
+  local width, height = love.graphics.getDimensions()
+  if math.abs(width - targetW) > 2 or math.abs(height - targetH) > 2 then
+    changed = true
+    ok = pcall(love.window.setMode, targetW, targetH, {
+      resizable = true,
+      minwidth = 960,
+      minheight = 540,
+      vsync = 1,
+      msaa = 0,
+      highdpi = true,
+    })
+  end
+  return changed, ok
+end
+
+local function firstGamepad()
+  if not love.joystick then
+    return nil
+  end
+  local list = love.joystick.getJoysticks()
+  return list and list[1] or nil
+end
+
+local padState = {
+  a = false,
+  b = false,
+  lb = false,
+  rb = false,
+  start = false,
+}
 
 function love.load()
   love.graphics.setDefaultFilter("linear", "linear", 8)
@@ -78,8 +139,50 @@ function love.load()
     game = stateModule.new(newSeed(), os.time())
   end
 
+  theme.setColorblind(game.settings.colorblind)
+  theme.setLargeText(game.settings.largeText)
+  local displayChanged, displayOk = applyDisplaySettings(game.settings)
+  if not displayOk then
+    print("No se pudo aplicar el tamaño de ventana guardado.")
+  end
+  if displayChanged then
+    theme.load()
+    canvas = love.graphics.newCanvas(config.window.width, config.window.height)
+    canvas:setFilter("linear", "linear")
+    handCursor = love.mouse.getSystemCursor("hand")
+    arrowCursor = love.mouse.getSystemCursor("arrow")
+  end
+
   uiApp = appModule.new(game)
   uiApp.saveCallback = writeSave
+  uiApp.backupCallback = function()
+    local saved, saveErr = writeSave()
+    if not saved then
+      return false, saveErr
+    end
+    local data = love.filesystem.read("save.json")
+    if not data or #data == 0 then
+      return false, "No hay una partida guardada."
+    end
+    return love.filesystem.write("save-backup.json", data)
+  end
+  uiApp.restoreCallback = function()
+    local data = love.filesystem.read("save-backup.json")
+    if not data or #data == 0 then
+      return false, "No existe save-backup.json."
+    end
+    local decoded, err = save.decode(data)
+    if not decoded then
+      return false, "La copia no es válida: " .. tostring(err)
+    end
+    local ok, writeErr = love.filesystem.write("save.json", data)
+    if not ok then
+      return false, writeErr
+    end
+    suppressSaveOnQuit = true
+    love.event.quit("restart")
+    return true
+  end
 
   local audioOk, audioError = audio.load()
   if not audioOk then
@@ -107,6 +210,86 @@ function love.update(dt)
   uiApp:update(dt, now)
   audio.update(dt, game.settings)
 
+  if uiApp.displayDirty then
+    uiApp.displayDirty = false
+    local changed, ok = applyDisplaySettings(game.settings)
+    if changed then
+      theme.load()
+      canvas = love.graphics.newCanvas(config.window.width, config.window.height)
+      canvas:setFilter("linear", "linear")
+      handCursor = love.mouse.getSystemCursor("hand")
+      arrowCursor = love.mouse.getSystemCursor("arrow")
+    end
+    if not ok then
+      uiApp:toast("No se pudo cambiar el tamaño de la ventana.", theme.colors.red)
+    end
+  end
+  theme.setColorblind(game.settings.colorblind)
+  theme.setLargeText(game.settings.largeText)
+
+  local pad = firstGamepad()
+  if pad and pad.isGamepad and pad:isGamepad() then
+    local ax = pad:getGamepadAxis("leftx") or 0
+    local ay = pad:getGamepadAxis("lefty") or 0
+    if math.abs(ax) > 0.22 or math.abs(ay) > 0.22 then
+      if uiApp.mouse.x < 0 then
+        uiApp.mouse.x = 640
+        uiApp.mouse.y = 360
+      end
+      uiApp.mouse.x = clampValue(uiApp.mouse.x + ax * 620 * dt, 0, config.window.width)
+      uiApp.mouse.y = clampValue(uiApp.mouse.y + ay * 620 * dt, 0, config.window.height)
+      uiApp.gamepadCursor = true
+    end
+
+    local a = pad:isGamepadDown("a")
+    if a and not padState.a then
+      if uiApp.mouse.x < 0 then
+        uiApp.mouse.x = 640
+        uiApp.mouse.y = 360
+      end
+      uiApp.gamepadCursor = true
+      uiApp.click = { x = uiApp.mouse.x, y = uiApp.mouse.y, button = 1 }
+    end
+    padState.a = a
+
+    local b = pad:isGamepadDown("b")
+    if b and not padState.b then
+      if uiApp.modal then
+        modals.escape(uiApp)
+      else
+        uiApp:goto("nest")
+      end
+    end
+    padState.b = b
+
+    local lb = pad:isGamepadDown("leftshoulder")
+    if lb and not padState.lb then
+      uiApp:cycleTab(-1)
+    end
+    padState.lb = lb
+
+    local rb = pad:isGamepadDown("rightshoulder")
+    if rb and not padState.rb then
+      uiApp:cycleTab(1)
+    end
+    padState.rb = rb
+
+    local start = pad:isGamepadDown("start")
+    if start and not padState.start then
+      writeSave()
+      uiApp:toast("Partida guardada.", theme.colors.green)
+    end
+    padState.start = start
+  else
+    uiApp.gamepadCursor = false
+    padState.a = false
+    padState.b = false
+    padState.lb = false
+    padState.rb = false
+    padState.start = false
+  end
+  love.mouse.setVisible(not uiApp.gamepadCursor)
+
   autosaveTimer = autosaveTimer + dt
   if autosaveTimer >= config.time.autosave then
     autosaveTimer = 0
@@ -123,6 +306,13 @@ function love.draw()
   love.graphics.setCanvas({ canvas, stencil = true })
   love.graphics.clear(theme.colors.bg[1], theme.colors.bg[2], theme.colors.bg[3], 1)
   uiApp:draw()
+  if uiApp.gamepadCursor then
+    love.graphics.setColor(1.0, 0.86, 0.34, 1)
+    love.graphics.setLineWidth(2)
+    love.graphics.circle("line", uiApp.mouse.x, uiApp.mouse.y, 8)
+    love.graphics.circle("fill", uiApp.mouse.x, uiApp.mouse.y, 2)
+    love.graphics.setLineWidth(1)
+  end
   love.graphics.setCanvas()
 
   love.graphics.clear(0, 0, 0, 1)
@@ -132,6 +322,8 @@ function love.draw()
 end
 
 function love.mousepressed(x, y, button)
+  uiApp.gamepadCursor = false
+  love.mouse.setVisible(true)
   local cx, cy = toCanvas(x, y)
   if cx < 0 or cy < 0 or cx > config.window.width or cy > config.window.height then
     return
@@ -151,12 +343,16 @@ function love.mousereleased(x, y, button)
 end
 
 function love.mousemoved(x, y)
+  uiApp.gamepadCursor = false
+  love.mouse.setVisible(true)
   local cx, cy = toCanvas(x, y)
   uiApp.mouse.x = cx
   uiApp.mouse.y = cy
 end
 
 function love.wheelmoved(_, y)
+  uiApp.gamepadCursor = false
+  love.mouse.setVisible(true)
   local cx, cy = toCanvas(love.mouse.getPosition())
   uiApp.wheel = { x = cx, y = cy, dy = y }
 end
@@ -182,12 +378,14 @@ function love.keypressed(key)
 end
 
 function love.focus(focused)
-  if not focused then
+  if not focused and not suppressSaveOnQuit then
     writeSave()
   end
 end
 
 function love.quit()
-  writeSave()
+  if not suppressSaveOnQuit then
+    writeSave()
+  end
   return false
 end

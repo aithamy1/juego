@@ -3,6 +3,17 @@ local config = require("src.game.config")
 
 local theme = { colors = {}, fonts = {} }
 
+theme.colorblind = false
+theme.textBoost = 0
+
+local colorblindRarity = {
+  common = { 0.86, 0.86, 0.82 },
+  uncommon = { 0.25, 0.75, 0.95 },
+  rare = { 1.00, 0.70, 0.15 },
+  epic = { 0.95, 0.45, 0.95 },
+  legendary = { 1.00, 0.92, 0.35 },
+}
+
 theme.colors = {
   bg = { 0.075, 0.065, 0.135 },
   bg2 = { 0.095, 0.080, 0.165 },
@@ -72,8 +83,20 @@ function theme.fontFor(size, bold)
   elseif bold == nil then
     bold = size >= 8
   end
+  local effective = size
+  if theme.textBoost > 0 and size <= 12 then
+    effective = size + 1
+  end
   local fonts = bold and theme.boldFonts or theme.fonts
-  return fonts[size] or fonts[14] or theme.fonts[14]
+  return fonts[effective] or fonts[size] or fonts[14] or theme.fonts[14]
+end
+
+function theme.setLargeText(value)
+  theme.textBoost = value and 1 or 0
+end
+
+function theme.setColorblind(value)
+  theme.colorblind = not not value
 end
 
 function theme.setFont(size, bold)
@@ -374,6 +397,22 @@ function theme.drawGear(x, y, radius, color)
   love.graphics.circle("fill", x, y, radius * 0.30)
 end
 
+function theme.drawTrophy(x, y, size, color)
+  color = color or theme.colors.text
+  theme.setColor(color, 1)
+  love.graphics.polygon("fill",
+    x - size * 0.55, y - size * 0.55,
+    x + size * 0.55, y - size * 0.55,
+    x + size * 0.35, y + size * 0.22,
+    x - size * 0.35, y + size * 0.22)
+  love.graphics.rectangle("fill", x - size * 0.10, y + size * 0.22, size * 0.20, size * 0.32)
+  love.graphics.rectangle("fill", x - size * 0.42, y + size * 0.54, size * 0.84, size * 0.16)
+  love.graphics.rectangle("fill", x - size * 0.72, y - size * 0.48, size * 0.18, size * 0.42)
+  love.graphics.rectangle("fill", x + size * 0.54, y - size * 0.48, size * 0.18, size * 0.42)
+  theme.setColor(theme.colors.panel, 0.9)
+  love.graphics.rectangle("fill", x - size * 0.28, y - size * 0.38, size * 0.56, size * 0.12)
+end
+
 function theme.drawNavIcon(kind, x, y, size, color)
   color = color or theme.colors.text
   theme.setColor(color, 1)
@@ -503,6 +542,9 @@ function theme.fmtClock(timestamp)
 end
 
 function theme.rarityColor(rarity)
+  if theme.colorblind and colorblindRarity[rarity] then
+    return colorblindRarity[rarity]
+  end
   local def = config.rarity[rarity]
   return def and def.color or theme.colors.muted
 end
