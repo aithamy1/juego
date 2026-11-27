@@ -599,10 +599,14 @@ function app:navInfo(key)
   elseif game.settings.reduceMotion then
     motionLabel = "Mov. reducido"
   end
+  local settingsSub = motionLabel
+  if not game.settings.calm and not game.settings.reduceMotion then
+    settingsSub = settingsSub .. " · Tope "
+      .. (game.settings.dailyCap == 0 and "sin límite" or tostring(game.settings.dailyCap))
+  end
   return {
     title = "Ajustes",
-    sub = motionLabel .. " · Tope "
-      .. (game.settings.dailyCap == 0 and "sin límite" or tostring(game.settings.dailyCap)),
+    sub = settingsSub,
     bar = 0,
     barColor = theme.colors.muted,
     icon = "settings",
