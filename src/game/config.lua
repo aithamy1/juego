@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "1.6.0"
+config.version = "1.7.0"
 config.saveVersion = 1
 
 config.window = {

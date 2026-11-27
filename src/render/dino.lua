@@ -5,7 +5,7 @@ local templates = require("src.render.dino_sprites")
 local render = {}
 
 local W, H = 96, 56
-local PIXEL = 2.1
+local PIXEL = 2.0
 local ORIGIN_X, ORIGIN_Y = 48, 40
 
 local function mix(a, b, t)
@@ -279,12 +279,18 @@ function render.drawDino(dino, x, y, scale, opts)
   end
   local flip = opts.flip and -1 or 1
   local ps = PIXEL * finalScale
+  -- El sprite se dibuja a un numero entero de pixeles de pantalla por pixel de arte.
+  -- En miniaturas muy pequenas se mantiene la escala fraccionaria para no romper la lista.
+  if scale >= 0.33 then
+    ps = math.max(1, math.floor(ps + 0.5))
+  end
 
-  -- sombra pixelada
+  -- sombra pixelada, alineada con los pies del sprite
+  local shadowY = y + 15.5 * ps
   love.graphics.setColor(0, 0, 0, 0.24 * alpha)
   for i = -3, 3 do
-    local width = 50 * finalScale * (1 - math.abs(i) * 0.11)
-    love.graphics.rectangle("fill", x - width, y + 31 * finalScale + i * 2 * finalScale, width * 2, 2 * finalScale + 1)
+    local width = 28 * ps * (1 - math.abs(i) * 0.10)
+    love.graphics.rectangle("fill", x - width, shadowY + i * 1.6 * ps, width * 2, 1.6 * ps + 1)
   end
 
   if mutation == "bioluminiscente" and not opts.silhouette then
@@ -292,7 +298,7 @@ function render.drawDino(dino, x, y, scale, opts)
     love.graphics.setBlendMode("add")
     for i = 4, 1, -1 do
       love.graphics.setColor(p.body[1], p.body[2], p.body[3], 0.035 * alpha * i)
-      love.graphics.circle("fill", x, y - 4 * finalScale, (52 + i * 10) * finalScale)
+      love.graphics.circle("fill", x, y - 4 * ps, (26 + i * 7) * ps)
     end
     love.graphics.setBlendMode("alpha")
   end

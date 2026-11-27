@@ -68,7 +68,7 @@ function app.new(game)
   self.game = game
   self.scene = "nest"
   self.now = os.time()
-  self.mouse = { x = -1, y = -1, hand = false }
+  self.mouse = { x = -1, y = -1, hand = false, down = false }
   self.click = nil
   self.wheel = nil
   self.scroll = {}
@@ -204,8 +204,8 @@ function app:drawHeader()
   theme.setFont(20)
   theme.setColor(theme.colors.ink, 1)
   love.graphics.print(theme.fmtCompact(game.amber), 48, 10)
-  theme.setFont(8)
-  theme.setColor(theme.colors.ink, 0.75)
+  theme.setFont(9)
+  theme.setColor(theme.colors.ink, 0.78)
   love.graphics.print("ÁMBAR", 49, 33)
   theme.setColor(theme.colors.ink, 0.9)
   love.graphics.printf("+" .. theme.fmtRate(production) .. "/s", 80, 34, 130, "right")
@@ -220,9 +220,9 @@ function app:drawHeader()
   theme.setFont(15)
   theme.setColor(theme.colors.text, 1)
   love.graphics.print(theme.fmtCompact(game.essence), 268, 15)
-  theme.setFont(8)
+  theme.setFont(9)
   theme.setColor(theme.colors.teal, 1)
-  love.graphics.print("ESENCIA", 269, 35)
+  love.graphics.print("ESENCIA", 269, 34)
 
   theme.panel(386, 8, 160, 46, {
     color = theme.colors.panel2,
@@ -234,16 +234,16 @@ function app:drawHeader()
   theme.setFont(15)
   theme.setColor(theme.colors.text, 1)
   love.graphics.print("x" .. theme.fmt(1 + config.prestige.legacyMultiplier * (game.prestige.totalLegacy or 0), 2), 420, 15)
-  theme.setFont(8)
+  theme.setFont(9)
   theme.setColor(theme.colors.purple, 1)
-  love.graphics.print("LEGADO", 421, 35)
+  love.graphics.print("LEGADO", 421, 34)
 
   theme.setFont(14, true)
   theme.setColor(theme.colors.gold, 1)
   love.graphics.print("CRIADERO DE ÁMBAR", 556, 11)
-  theme.setFont(8)
+  theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("v" .. config.version, 557, 31)
+  love.graphics.print("v" .. config.version, 557, 30)
 
   local gearX, gearY = 1222, 10
   local hover = widgets.hover(self, gearX, gearY, 44, 44)
@@ -357,7 +357,6 @@ function app:drawLeftSidebar()
     local hover = widgets.hover(self, x, y, self.layout.leftW, 64)
     if hover then
       self.mouse.hand = true
-      self.tooltip = "Atajo: " .. tab.hotkey
     end
     if widgets.click(self, x, y, self.layout.leftW, 64) then
       self:goto(tab.key)
@@ -379,7 +378,17 @@ function app:drawLeftSidebar()
     theme.setFont(9)
     theme.setColor(active and theme.colors.textDim or theme.colors.muted, 1)
     love.graphics.print(info.sub, x + 49, y + 27)
-    widgets.progressBar(x + 49, y + 45, 165, 5, info.bar or 0, info.barColor, {})
+    widgets.progressBar(x + 49, y + 45, 158, 5, info.bar or 0, info.barColor, {})
+    local keyX, keyY = x + self.layout.leftW - 25, y + 8
+    theme.panel(keyX, keyY, 17, 17, {
+      color = active and theme.colors.goldDark or theme.colors.bg,
+      borderColor = active and theme.colors.gold or theme.colors.borderSoft,
+      shadow = false,
+      borderWidth = 1,
+    })
+    theme.setFont(9, true)
+    theme.setColor(active and theme.colors.goldLight or theme.colors.textDim, 1)
+    love.graphics.printf(tab.hotkey, keyX, keyY + 4, 17, "center")
     y = y + 68
   end
 
@@ -455,9 +464,9 @@ function app:drawRightSidebar()
       theme.setFont(10)
       theme.setColor(canBuy and theme.colors.goldLight or theme.colors.muted, 1)
       love.graphics.print(theme.fmtInt(cost), x + 55, y + 37)
-      theme.setFont(8)
+      theme.setFont(9)
       theme.setColor(theme.colors.muted, 1)
-      love.graphics.print(def.currency == "amber" and "ámbar" or "esencia", x + 55, y + 52)
+      love.graphics.print(def.currency == "amber" and "ámbar" or "esencia", x + 55, y + 51)
     end
     widgets.progressBar(x + 8, y + 64, self.layout.rightW - 16, 4, level / def.max,
       maxed and theme.colors.green or theme.colors.gold, {})

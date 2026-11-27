@@ -131,7 +131,14 @@ function love.mousepressed(x, y, button)
   uiApp.mouse.x = cx
   uiApp.mouse.y = cy
   if button == 1 then
+    uiApp.mouse.down = true
     uiApp.click = { x = cx, y = cy, button = button }
+  end
+end
+
+function love.mousereleased(x, y, button)
+  if button == 1 then
+    uiApp.mouse.down = false
   end
 end
 

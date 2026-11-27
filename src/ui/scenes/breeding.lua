@@ -111,21 +111,21 @@ local function drawCard(app, dino, x, y, w, h, now)
     borderWidth = selected and 2 or 1,
   })
   render.drawDino(dino, x + w / 2, y + 42, 0.38, {})
-  theme.setFont(9)
+  theme.setFont(10)
   theme.setColor(theme.colors.text, 1)
-  love.graphics.printf(config.species[dino.species].name, x + 4, y + 76, w - 8, "center")
+  love.graphics.printf(config.species[dino.species].name, x + 4, y + 74, w - 8, "center")
   widgets.rarityChip(x + 8, y + 90, dino.rarity, true)
   local adult = now >= (dino.adultAt or 0)
-  theme.setFont(8)
+  theme.setFont(9)
   theme.setColor(adult and theme.colors.textDim or theme.colors.muted, 1)
   love.graphics.printf(adult and ("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s")
-    or ("Creciendo " .. theme.fmtTime((dino.adultAt or now) - now)), x + 4, y + 114, w - 8, "center")
+    or ("Creciendo " .. theme.fmtTime((dino.adultAt or now) - now)), x + 4, y + 112, w - 8, "center")
   if stateModule.isCrossing(app.game, dino.id) then
-    theme.setFont(7)
+    theme.setFont(8)
     theme.setColor(theme.colors.essence, 1)
     love.graphics.printf("EN CRUCE", x + 4, y + 128, w - 8, "center")
   elseif dino.mutation then
-    theme.setFont(7)
+    theme.setFont(8)
     theme.setColor(theme.colors.purple, 1)
     love.graphics.printf(config.mutations[dino.mutation].name, x + 4, y + 128, w - 8, "center")
   end
@@ -159,41 +159,41 @@ local function drawDetail(app, dino, x, y, w, h, now)
       shadowSize = 0,
       borderWidth = 1,
     })
-    theme.setFont(8)
+    theme.setFont(9)
     theme.setColor(theme.colors.gold, 1)
-    love.graphics.print("RESUMEN DEL CRIADERO", x + 20, y + 86)
-    theme.setFont(8)
+    love.graphics.print("RESUMEN DEL CRIADERO", x + 20, y + 85)
+    theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("Ejemplares", x + 20, y + 106)
-    love.graphics.print("Adultos", x + 130, y + 106)
+    love.graphics.print("Ejemplares", x + 20, y + 105)
+    love.graphics.print("Adultos", x + 130, y + 105)
     theme.setFont(13)
     theme.setColor(theme.colors.text, 1)
     love.graphics.print(tostring(#game.dinos), x + 20, y + 118)
     love.graphics.print(adults .. " / " .. #game.dinos, x + 130, y + 118)
-    theme.setFont(8)
+    theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("Producción", x + 20, y + 144)
+    love.graphics.print("Producción", x + 20, y + 143)
     theme.setFont(12)
     theme.setColor(theme.colors.amber, 1)
     love.graphics.print("+" .. theme.fmtRate(economy.totalProduction(game, now)) .. "/s", x + 20, y + 156)
-    theme.setFont(8)
+    theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("Mutaciones", x + 130, y + 144)
+    love.graphics.print("Mutaciones", x + 130, y + 143)
     theme.setFont(12)
     theme.setColor(theme.colors.purple, 1)
     love.graphics.print(tostring(game.stats.mutations or 0), x + 130, y + 156)
-    theme.setFont(8)
+    theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("Pity raro", x + 20, y + 184)
+    love.graphics.print("Pity raro", x + 20, y + 183)
     theme.setColor(theme.colors.blue, 1)
     love.graphics.print((game.pity.rare or 0) .. " / " .. (config.rates.pity.rareAt - 1), x + 100, y + 184)
     theme.setColor(theme.colors.muted, 1)
     love.graphics.print("Legendario", x + 130, y + 184)
     theme.setColor(theme.colors.amber, 1)
     love.graphics.print((game.pity.legendary or 0) .. " / " .. (config.rates.pity.legendaryAt - 1), x + 130, y + 196)
-    theme.setFont(8)
+    theme.setFont(9)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("Capacidad del nido " .. economy.nestCapacity(game), x + 20, y + 210)
+    love.graphics.print("Capacidad del nido " .. economy.nestCapacity(game), x + 20, y + 209)
     return
   end
 
@@ -204,9 +204,9 @@ local function drawDetail(app, dino, x, y, w, h, now)
   love.graphics.printf(config.species[dino.species].name, x + 10, y + 134, w - 20, "center")
   local chipW = widgets.rarityChip(x + 10, y + 158, dino.rarity)
   if dino.mutation then
-    widgets.chip(x + 18 + chipW, y + 158, config.mutations[dino.mutation].name, theme.colors.purple, { font = 8 })
+    widgets.chip(x + 18 + chipW, y + 158, config.mutations[dino.mutation].name, theme.colors.purple, { font = 9 })
   end
-  theme.setFont(8)
+  theme.setFont(9)
   theme.setColor(adult and theme.colors.green or theme.colors.muted, 1)
   love.graphics.printf(adult and "Adulto" or ("Creciendo: " .. theme.fmtTime((dino.adultAt or now) - now)),
     x + 10, y + 180, w - 20, "center")
@@ -219,7 +219,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
     { "Cresta", config.crests[dino.genes.crest].name },
   }
   for _, row in ipairs(rows) do
-    theme.setFont(9)
+    theme.setFont(10)
     theme.setColor(theme.colors.muted, 1)
     love.graphics.print(row[1], x + 12, rowY)
     theme.setColor(theme.colors.text, 1)
@@ -228,13 +228,13 @@ local function drawDetail(app, dino, x, y, w, h, now)
   end
 
   rowY = rowY + 4
-  theme.setFont(8)
+  theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.print("Genes funcionales", x + 12, rowY)
   rowY = rowY + 16
   for _, gene in ipairs(config.functionalOrder) do
     local value = dino.functional[gene] or 1
-    theme.setFont(8)
+    theme.setFont(9)
     theme.setColor(theme.colors.textDim, 1)
     love.graphics.print(config.functional[gene].short, x + 12, rowY)
     widgets.progressBar(x + 46, rowY + 3, 140, 5, value / 5, theme.colors.green, {})
@@ -243,7 +243,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
     rowY = rowY + 14
   end
 
-  theme.setFont(8)
+  theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.print("Producción", x + 12, rowY + 6)
   theme.setFont(12)
@@ -253,7 +253,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
   local busy = stateModule.isCrossing(app.game, dino.id)
   widgets.button(app, x + 12, y + 378, w - 24, 40, "ENVIAR A CRUCES", {
     style = "primary",
-    font = 9,
+    font = 10,
     disabled = busy or not adult,
     tooltip = busy and "Este ejemplar está en un cruce." or (not adult and "Debe ser adulto.") or "Elegir como progenitor.",
     onClick = function()

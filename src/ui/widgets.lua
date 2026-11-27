@@ -88,17 +88,19 @@ function widgets.button(app, x, y, w, h, label, opts)
   if hover and not opts.disabled then
     app.mouse.hand = true
   end
-  theme.panel(x, y, w, h, {
+  local pressed = hover and app.mouse.down and not opts.disabled
+  local offset = pressed and 1 or 0
+  theme.panel(x, y + offset, w, h, {
     color = fill,
     borderColor = border,
     shadow = not opts.disabled,
-    shadowSize = 3,
+    shadowSize = pressed and 2 or 3,
     borderWidth = 2,
   })
 
   theme.setFont(opts.font or 13)
   local font = theme.fontFor(opts.font or 13)
-  local textY = y + (h - font:getHeight()) / 2 - 1
+  local textY = y + offset + (h - font:getHeight()) / 2 - 1
   theme.setColor(fg, 1)
   love.graphics.printf(label, x + 6, textY, w - 12, opts.align or "center")
   return hover, clicked
