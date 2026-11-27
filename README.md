@@ -62,18 +62,18 @@ src/game/                lógica pura, sin love.*
   state.lua              estado y acciones
   save.lua               serialización, versión y migraciones
 src/render/dino.lua      dinosaurios, huevos y mutaciones
-src/render/dino_sprites.lua  plantillas pixel-art de 64×40
+src/render/dino_sprites.lua  plantillas pixel-art de 96×56
 src/ui/                  tema, widgets, escenas y modales
 tests/                   runner y suites con luajit
 ```
 
 ## Interfaz
 
-La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, mejoras rápidas y prestigio a la derecha, fuente pixel-art y paneles con bisel. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta nueve dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
+La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, mejoras rápidas y prestigio a la derecha, fuente pixel-art y paneles con bisel. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
 
 ## Dinosaurios
 
-Los dinosaurios son sprites de píxel de **64×40** dibujados a mano píxel a píxel y cacheados: contorno oscuro de un píxel, cuerpo plano, panza clara y una sombra de píxel. Cada especie tiene una silueta propia y reconocible, con ojo grande, pico y sus rasgos distintivos: gola y cuernos del Triceratops, plumas y garra del Velociraptor, cresta tubular del Parasaurolophus, alas y cresta del Pteranodon, placas del Stegosaurus y coraza y maza del Ankylosaurus. Las plantillas viven en `src/render/dino_sprites.lua`; los genes de patrón, color, cresta y mutación se aplican encima y la pradera los mueve y los gira.
+Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas anatómicas: cuerpo horizontal, cuello, cola y patas proporcionados, contorno oscuro de un píxel, panza clara y una sombra de píxel. Cada especie tiene su rasgo distintivo: gola y tres cuernos del Triceratops, placas y púas del Stegosaurus, coraza y maza del Ankylosaurus, cresta tubular y pico de pato del Parasaurolophus, plumas y garra del Velociraptor, y alas, cresta y pico del Pteranodon. Las plantillas viven en `src/render/dino_sprites.lua`; los genes de patrón, color, cresta y mutación se aplican encima y la pradera los mueve y los gira. Las siluetas anatómicas de base proceden de PhyloPic (CC0) y se han pixelado y coloreado para el juego.
 
 ## Cómo se juega
 

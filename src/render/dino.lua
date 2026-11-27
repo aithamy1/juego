@@ -4,9 +4,9 @@ local templates = require("src.render.dino_sprites")
 
 local render = {}
 
-local W, H = 64, 40
-local PIXEL = 3.0
-local ORIGIN_X, ORIGIN_Y = 32, 27
+local W, H = 96, 56
+local PIXEL = 2.1
+local ORIGIN_X, ORIGIN_Y = 48, 40
 
 local function mix(a, b, t)
   return {
@@ -65,12 +65,12 @@ local function palette(dino)
 end
 
 local crestSpots = {
-  triceratops = { 52, 15 },
-  velociraptor = { 44, 16 },
-  parasaurolophus = { 50, 16 },
-  pteranodon = { 44, 18 },
-  stegosaurus = { 47, 24 },
-  ankylosaurus = { 47, 27 },
+  triceratops = { 86, 32 },
+  velociraptor = { 87, 27 },
+  parasaurolophus = { 86, 26 },
+  pteranodon = { 62, 31 },
+  stegosaurus = { 84, 42 },
+  ankylosaurus = { 84, 40 },
 }
 
 local function emptyGrid()
@@ -284,7 +284,7 @@ function render.drawDino(dino, x, y, scale, opts)
   love.graphics.setColor(0, 0, 0, 0.24 * alpha)
   for i = -3, 3 do
     local width = 50 * finalScale * (1 - math.abs(i) * 0.11)
-    love.graphics.rectangle("fill", x - width, y + 37 * finalScale + i * 2 * finalScale, width * 2, 2 * finalScale + 1)
+    love.graphics.rectangle("fill", x - width, y + 31 * finalScale + i * 2 * finalScale, width * 2, 2 * finalScale + 1)
   end
 
   if mutation == "bioluminiscente" and not opts.silhouette then

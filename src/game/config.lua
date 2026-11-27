@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "1.5.0"
+config.version = "1.6.0"
 config.saveVersion = 1
 
 config.window = {
@@ -118,7 +118,7 @@ config.species = {
     name = "Velociraptor",
     short = "Velociraptor",
     desc = "Cazador ligero, plumado y de cola larga.",
-    bodyScale = 0.92,
+    bodyScale = 1.0,
   },
   parasaurolophus = {
     name = "Parasaurolophus",

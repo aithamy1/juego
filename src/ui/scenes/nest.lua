@@ -115,7 +115,7 @@ local function drawPasture(app, x, y, w, h, now)
     end
   end
 
-  -- dinosaurios ordenados por rareza; los primeros 9 salen a la pradera
+  -- dinosaurios ordenados por rareza; los primeros 6 salen a la pradera
   local list = {}
   for _, dino in ipairs(game.dinos) do
     list[#list + 1] = dino
@@ -130,17 +130,17 @@ local function drawPasture(app, x, y, w, h, now)
     return a.id > b.id
   end)
 
-  local shown = math.min(9, #list)
+  local shown = math.min(6, #list)
   local hoveredDino = false
   local lanes = {
     { ground = iy + ih - 78, scale = 0.34 },
     { ground = iy + ih - 50, scale = 0.41 },
     { ground = iy + ih - 22, scale = 0.48 },
   }
-  local segW = (iw - 36) / 3
+  local segW = (iw - 36) / 2
   for lane = 1, 3 do
     local laneCfg = lanes[lane]
-    for slot = 1, 3 do
+    for slot = 1, 2 do
       local index = (slot - 1) * 3 + lane
       local dino = list[index]
       if dino then
@@ -152,7 +152,7 @@ local function drawPasture(app, x, y, w, h, now)
         local flip = math.cos(time * speed + phase) < 0
         local cy = laneCfg.ground - 48 * laneCfg.scale
         render.drawDino(dino, dx, cy, laneCfg.scale, { flip = flip })
-        local hw, hh = 48 * laneCfg.scale, 42 * laneCfg.scale
+        local hw, hh = 72 * laneCfg.scale, 52 * laneCfg.scale
         if widgets.hover(app, dx - hw, cy - hh, hw * 2, hh * 2) then
           hoveredDino = true
           app.mouse.hand = true
