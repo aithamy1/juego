@@ -97,6 +97,55 @@ local function addTone(buffer, startSeconds, duration, frequency, amplitude, opt
   end
 end
 
+-- Barrido de frecuencia con vibrato y trémolo, para llamadas y rugidos.
+local function addSweep(buffer, startSeconds, duration, fromHz, toHz, amplitude, opts)
+  opts = opts or {}
+  local samples = #buffer
+  local first = math.floor(startSeconds * RATE)
+  local count = math.floor(duration * RATE)
+  if count <= 0 then return end
+  local attack = opts.attack or 0.02
+  local release = opts.release or 0.12
+  local bend = opts.bend or 1
+  local vibrato = opts.vibrato or 0
+  local vibratoRate = opts.vibratoRate or 5
+  local tremolo = opts.tremolo or 0
+  local tremoloRate = opts.tremoloRate or 20
+  local detune = opts.detune or 0
+  local kind = opts.wave or "tri"
+  local phase = 0
+  for j = 0, count - 1 do
+    local t = j / RATE
+    local u = t / duration
+    local f = fromHz + (toHz - fromHz) * (u ^ bend)
+    if vibrato > 0 then
+      f = f * (1 + vibrato * math.sin(TAU * vibratoRate * t))
+    end
+    phase = phase + f / RATE
+    local sample = oscillator(kind, phase)
+    if detune > 0 then
+      sample = sample * 0.68 + oscillator(kind, phase * (1 + detune)) * 0.32
+    end
+    local envelope
+    if t < attack then
+      envelope = t / attack
+    else
+      envelope = 1
+    end
+    if t > duration - release then
+      envelope = envelope * math.max(0, (duration - t) / release)
+    end
+    if opts.decay then
+      envelope = envelope * math.exp(-opts.decay * t)
+    end
+    if tremolo > 0 then
+      envelope = envelope * (1 - tremolo * 0.5 * (1 - math.cos(TAU * tremoloRate * t)))
+    end
+    local index = (first + j) % samples + 1
+    buffer[index] = buffer[index] + sample * amplitude * envelope
+  end
+end
+
 local function addNoise(buffer, startSeconds, duration, amplitude, decay, seed)
   local samples = #buffer
   local first = math.floor(startSeconds * RATE)
@@ -298,6 +347,139 @@ local function buildHatch()
   return toSoundData(buffer, samples, 0.92)
 end
 
+-- Llamadas de cada especie: graves y largas para los grandes, agudas y cortas
+-- para los pequeños. Se generan al arrancar, como el resto del audio.
+local function buildTRexCall()
+  local buffer, samples = makeBuffer(1.35)
+  addSweep(buffer, 0.00, 1.10, 96, 54, 0.55, {
+    wave = "tri", attack = 0.05, release = 0.35,
+    vibrato = 0.030, vibratoRate = 4.2,
+    tremolo = 0.35, tremoloRate = 18,
+    detune = 0.012,
+  })
+  addSweep(buffer, 0.04, 1.00, 144, 82, 0.22, {
+    wave = "softsquare", attack = 0.08, release = 0.28,
+    vibrato = 0.022, vibratoRate = 5.2, detune = 0.010,
+  })
+  addSweep(buffer, 0.00, 0.85, 48, 36, 0.30, {
+    wave = "sine", attack = 0.08, release = 0.35,
+  })
+  addNoise(buffer, 0.02, 0.95, 0.10, 2.4, 71)
+  return toSoundData(buffer, samples, 0.95)
+end
+
+local function buildTriceratopsCall()
+  local buffer, samples = makeBuffer(0.95)
+  addSweep(buffer, 0.00, 0.78, 152, 112, 0.50, {
+    wave = "softsquare", attack = 0.04, release = 0.24,
+    vibrato = 0.018, vibratoRate = 5.0,
+    tremolo = 0.18, tremoloRate = 13,
+  })
+  addSweep(buffer, 0.02, 0.72, 76, 58, 0.30, {
+    wave = "sine", attack = 0.06, release = 0.28,
+  })
+  addNoise(buffer, 0.00, 0.55, 0.055, 4.0, 73)
+  return toSoundData(buffer, samples, 0.90)
+end
+
+local function buildStegosaurusCall()
+  local buffer, samples = makeBuffer(0.82)
+  addSweep(buffer, 0.00, 0.26, 104, 76, 0.50, {
+    wave = "tri", attack = 0.025, release = 0.09,
+    tremolo = 0.55, tremoloRate = 26,
+  })
+  addSweep(buffer, 0.33, 0.28, 96, 68, 0.42, {
+    wave = "tri", attack = 0.025, release = 0.10,
+    tremolo = 0.50, tremoloRate = 22,
+  })
+  addNoise(buffer, 0.00, 0.60, 0.10, 5.0, 76)
+  addSweep(buffer, 0.00, 0.55, 52, 44, 0.18, {
+    wave = "sine", attack = 0.03, release = 0.18,
+  })
+  return toSoundData(buffer, samples, 0.92)
+end
+
+local function buildAnkylosaurusCall()
+  local buffer, samples = makeBuffer(0.62)
+  addSweep(buffer, 0.00, 0.40, 128, 92, 0.45, {
+    wave = "softsquare", attack = 0.02, release = 0.16,
+    tremolo = 0.55, tremoloRate = 30,
+  })
+  addNoise(buffer, 0.02, 0.50, 0.16, 6.0, 79)
+  addSweep(buffer, 0.04, 0.30, 64, 54, 0.24, {
+    wave = "sine", attack = 0.02, release = 0.12,
+  })
+  return toSoundData(buffer, samples, 0.90)
+end
+
+local function buildParasaurolophusCall()
+  local buffer, samples = makeBuffer(1.02)
+  addSweep(buffer, 0.00, 0.55, 180, 242, 0.42, {
+    wave = "tri", attack = 0.05, release = 0.06,
+    vibrato = 0.010, vibratoRate = 5.5,
+  })
+  addSweep(buffer, 0.50, 0.50, 242, 164, 0.42, {
+    wave = "tri", attack = 0.02, release = 0.18,
+    vibrato = 0.018, vibratoRate = 6.0,
+  })
+  addSweep(buffer, 0.00, 0.98, 90, 82, 0.20, {
+    wave = "sine", attack = 0.06, release = 0.20,
+  })
+  addNoise(buffer, 0.02, 0.70, 0.030, 3.0, 83)
+  return toSoundData(buffer, samples, 0.90)
+end
+
+local function buildVelociraptorCall()
+  local buffer, samples = makeBuffer(0.52)
+  addSweep(buffer, 0.00, 0.20, 860, 1480, 0.40, {
+    wave = "tri", attack = 0.004, release = 0.04,
+    vibrato = 0.040, vibratoRate = 20,
+  })
+  addSweep(buffer, 0.19, 0.26, 1420, 900, 0.32, {
+    wave = "tri", attack = 0.004, release = 0.09,
+    vibrato = 0.050, vibratoRate = 24,
+  })
+  addNoise(buffer, 0.00, 0.36, 0.10, 9.0, 89)
+  return toSoundData(buffer, samples, 0.85)
+end
+
+local function buildPteranodonCall()
+  local buffer, samples = makeBuffer(0.58)
+  addSweep(buffer, 0.00, 0.46, 640, 420, 0.38, {
+    wave = "softsquare", attack = 0.006, release = 0.16,
+    vibrato = 0.050, vibratoRate = 30,
+  })
+  addSweep(buffer, 0.02, 0.42, 960, 690, 0.14, {
+    wave = "tri", attack = 0.005, release = 0.14,
+    vibrato = 0.060, vibratoRate = 34,
+  })
+  addNoise(buffer, 0.00, 0.42, 0.15, 7.0, 97)
+  return toSoundData(buffer, samples, 0.88)
+end
+
+local callBuilders = {
+  trex = buildTRexCall,
+  triceratops = buildTriceratopsCall,
+  stegosaurus = buildStegosaurusCall,
+  ankylosaurus = buildAnkylosaurusCall,
+  parasaurolophus = buildParasaurolophusCall,
+  velociraptor = buildVelociraptorCall,
+  pteranodon = buildPteranodonCall,
+}
+
+local callMeta = {
+  trex = { duration = 1.35, low = 48, high = 144, family = "rugido", volume = 0.62, duck = 0.45 },
+  triceratops = { duration = 0.95, low = 58, high = 152, family = "bramido", volume = 0.58, duck = 0.28 },
+  stegosaurus = { duration = 0.82, low = 44, high = 104, family = "gruñido", volume = 0.55, duck = 0.22 },
+  ankylosaurus = { duration = 0.62, low = 54, high = 128, family = "resoplido", volume = 0.55, duck = 0.22 },
+  parasaurolophus = { duration = 1.02, low = 82, high = 242, family = "bocina", volume = 0.60, duck = 0.30 },
+  velociraptor = { duration = 0.52, low = 860, high = 1480, family = "chillido", volume = 0.50, duck = 0.20 },
+  pteranodon = { duration = 0.58, low = 420, high = 960, family = "graznido", volume = 0.50, duck = 0.20 },
+}
+
+local speciesSources = {}
+local sfxVolume = 1
+
 function audio.load()
   if ready then
     return true
@@ -310,6 +492,16 @@ function audio.load()
     crackSource:setVolume(0.72)
     hatchSource = love.audio.newSource(buildHatch(), "static")
     hatchSource:setVolume(0.85)
+    for species, builder in pairs(callBuilders) do
+      local okCall, source = pcall(function()
+        local callSource = love.audio.newSource(builder(), "static")
+        callSource:setVolume(callMeta[species].volume)
+        return callSource
+      end)
+      if okCall then
+        speciesSources[species] = source
+      end
+    end
   end)
   if not ok then
     return false, tostring(err)
@@ -322,6 +514,14 @@ function audio.update(dt, settings)
   if not ready then return end
   settings = settings or {}
   sfxEnabled = settings.sfx ~= false
+
+  if not sfxEnabled then
+    for _, source in pairs(speciesSources) do
+      if source:isPlaying() then
+        source:stop()
+      end
+    end
+  end
 
   local wanted = settings.music ~= false
   local speed = wanted and 2.2 or 5.0
@@ -344,13 +544,18 @@ function audio.update(dt, settings)
   end
 
   local musicScale = (settings.musicVolume or 100) / 100
-  local sfxScale = (settings.sfxVolume or 100) / 100
+  sfxVolume = (settings.sfxVolume or 100) / 100
+  local sfxScale = sfxVolume
   musicSource:setVolume(MUSIC_VOLUME * musicGain * duckGain * musicScale)
   if crackSource then
     crackSource:setVolume(0.72 * sfxScale)
   end
   if hatchSource then
     hatchSource:setVolume(0.85 * sfxScale)
+  end
+  for species, source in pairs(speciesSources) do
+    local meta = callMeta[species]
+    source:setVolume((meta and meta.volume or 0.55) * sfxScale)
   end
 end
 
@@ -374,6 +579,26 @@ function audio.playHatch(rarity)
   hatchSource:setPitch(pitch)
   hatchSource:play()
   duckTimer = 0.85
+end
+
+function audio.playSpecies(species, seed)
+  if not ready or not sfxEnabled or sfxVolume <= 0 then return end
+  local source = speciesSources[species] or speciesSources.triceratops
+  if not source then return end
+  local meta = callMeta[species] or callMeta.triceratops
+  local pitch = 1
+  if seed then
+    pitch = pitch + ((seed % 7) - 3) * 0.01
+  end
+  source:stop()
+  source:setPitch(pitch)
+  source:setVolume((meta.volume or 0.55) * sfxVolume)
+  source:play()
+  duckTimer = math.max(duckTimer, meta.duck or 0.25)
+end
+
+function audio.callInfo(species)
+  return callMeta[species]
 end
 
 function audio.isReady()

@@ -36,6 +36,7 @@ Los tests cubren:
 - Roles, capacidad de hábitats, decoraciones y efectos del árbol de legado.
 - Logros y objetivos con recompensa única, favoritos, duplicados y límites de volumen.
 - Ciclos de marcha por especie: fotogramas distintos, cuerpo conservado y avance temporal.
+- Llamadas por especie: cobertura, síntesis, volumen y reproducción con efectos activados o silenciados.
 
 ## Controles
 
@@ -76,7 +77,7 @@ tests/                   runner y suites con luajit
 
 ## Interfaz
 
-La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, panel contextual y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado, cada especie con su propio ciclo de marcha. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
+La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, panel contextual y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado, cada especie con su propio ciclo de marcha. Al hacer clic en uno suena su llamada y se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
 
 La cabecera de cada escena muestra una **acción recomendada** (abrir huevos, incubar, asignar roles o mejorar). El panel derecho cambia según la escena: mejoras rápidas en Nido y Criadero, resumen en Mejoras, colección en Dinodex, registro en Registro y controles en Ajustes. Los tooltips aparecen tras un breve retardo, las compras muestran **LISTO** o **faltan X**, y el dorado queda para el ámbar, las acciones principales y las rarezas.
 
@@ -126,6 +127,7 @@ Todo el sonido se genera al arrancar con `love.sound` y `love.audio`, sin archiv
 
 - **Música**: un bucle lento de 8 compases en Do mayor, a 72 BPM, con pad cálido, bajo suave, melodía de piano con eco y percusión apenas audible. Se reproduce en bucle y baja de volumen durante la eclosión.
 - **Efectos**: crujidos progresivos de cáscara, rotura y un acorde ascendente al salir el dinosaurio. El tono del acorde sube ligeramente con la rareza.
+- **Llamadas**: cada especie tiene su propia llamada sintetizada al pulsarla en la pradera. El T-Rex ruge grave, el Triceratops brama, el Stegosaurus gruñe dos veces, el Ankylosaurus resopla, el Parasaurolophus hace una bocina ascendente y descendente, el Velociraptor chilla y el Pteranodon grazna. El tono varía un poco por ejemplar.
 - **Ajustes**: **Música** y **Efectos de sonido** se pueden silenciar por separado desde Ajustes. La elección se guarda en la partida y se conserva al migrar.
 - Si no hay dispositivo de audio, el juego sigue arrancando sin sonido.
 
@@ -214,6 +216,7 @@ La especificación no fijaba estos detalles; se resolvieron así:
 27. **Puesta**: cada adulto acumula su propio temporizador. La primera puesta llega tras su intervalo; si el nido está lleno, el temporizador se queda preparado. Los huevos de cruce no usan este temporizador.
 28. **Duración de partida**: la primera Gran Migración pide 120 huevos abiertos y está pensada para rondar 4–5 h de juego activo. Las migraciones siguientes son más rápidas por el legado y los puntos del árbol.
 29. **Animación de la pradera**: cada especie tiene su propio ciclo de 8 fotogramas (zancada, cola, cabeza o alas). El ritmo cambia un poco por ejemplar; los fotogramas se generan bajo demanda y se guardan en caché. **Reducir movimiento** y el modo tranquilo desactivan el ciclo y dejan una pose fija.
+30. **Llamadas**: al pulsar un dinosaurio en la pradera suena su llamada de especie. Cada llamada es una síntesis distinta; el tono varía ligeramente por ejemplar. Respeta el ajuste de efectos y el volumen, y silencia la música un momento mientras suena.
 
 ## Empaquetar un `.love`
 

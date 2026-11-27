@@ -5,6 +5,7 @@ local hatch = require("src.game.hatch")
 local theme = require("src.ui.theme")
 local widgets = require("src.ui.widgets")
 local render = require("src.render.dino")
+local audio = require("src.audio.audio")
 
 local nest = {}
 
@@ -272,6 +273,7 @@ local function drawPasture(app, x, y, w, h, now)
           app.mouse.hand = true
           app.tooltip = "Ver la ficha de " .. config.species[dino.species].name .. "."
           if widgets.click(app, dx - hw, cy - hh, hw * 2, hh * 2) then
+            audio.playSpecies(dino.species, dino.id)
             app.selectedDino = dino.id
             app:goto("breeding")
           end

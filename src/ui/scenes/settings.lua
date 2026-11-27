@@ -48,7 +48,7 @@ function settings.draw(app)
   widgets.toggle(app, x + 12, y + 82, 326, 30, "Efectos de sonido", game.settings.sfx, function(value)
     stateModule.setSetting(game, "sfx", value)
     app:toast(value and "Efectos activados." or "Efectos silenciados.", theme.colors.textDim)
-  end, { tooltip = "Crujidos de cáscara y sonido de eclosión." })
+  end, { tooltip = "Crujidos, eclosión y llamadas de los dinosaurios." })
 
   widgets.toggle(app, x + 12, y + 116, 326, 30, "Modo tranquilo", game.settings.calm, function(value)
     stateModule.setSetting(game, "calm", value)
