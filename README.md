@@ -77,7 +77,7 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 
 Todo el sonido se genera al arrancar con `love.sound` y `love.audio`, sin archivos de audio externos:
 
-- **Música**: un bucle de 8 compases en La menor con pad, bajo, arpegio y melodía, más percusión suave. Se reproduce en bucle y baja de volumen durante la eclosión.
+- **Música**: un bucle lento de 8 compases en Do mayor, a 72 BPM, con pad cálido, bajo suave, melodía de piano con eco y percusión apenas audible. Se reproduce en bucle y baja de volumen durante la eclosión.
 - **Efectos**: crujidos progresivos de cáscara, rotura y un acorde ascendente al salir el dinosaurio. El tono del acorde sube ligeramente con la rareza.
 - **Ajustes**: **Música** y **Efectos de sonido** se pueden silenciar por separado desde Ajustes. La elección se guarda en la partida y se conserva al migrar.
 - Si no hay dispositivo de audio, el juego sigue arrancando sin sonido.

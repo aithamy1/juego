@@ -4,7 +4,7 @@ local audio = {}
 
 local RATE = 22050
 local TAU = math.pi * 2
-local MUSIC_VOLUME = 0.34
+local MUSIC_VOLUME = 0.32
 
 local musicSource
 local crackSource
@@ -39,6 +39,10 @@ local function oscillator(kind, phase)
   elseif kind == "softsquare" then
     local base = math.sin(phase * TAU)
     return base + 0.30 * math.sin(phase * TAU * 3) + 0.10 * math.sin(phase * TAU * 5)
+  elseif kind == "epiano" then
+    return math.sin(phase * TAU) * 0.72
+      + math.sin(phase * TAU * 2) * 0.20
+      + math.sin(phase * TAU * 3) * 0.06
   end
   return math.sin(phase * TAU)
 end
@@ -124,6 +128,18 @@ local function addKick(buffer, startSeconds, amplitude)
   end
 end
 
+local function warmLoop(buffer, samples)
+  local coefficient = 0.55
+  local previous = 0
+  for i = 1, samples do
+    previous = previous + coefficient * (buffer[i] - previous)
+  end
+  for i = 1, samples do
+    previous = previous + coefficient * (buffer[i] - previous)
+    buffer[i] = previous
+  end
+end
+
 local function toSoundData(buffer, samples, peakTarget)
   local peak = 0
   for i = 1, samples do
@@ -140,97 +156,103 @@ local function toSoundData(buffer, samples, peakTarget)
   return data
 end
 
--- Loop de 8 compases en La menor: pad, bajo, arpegio y melodía suave.
+-- Bucle lento en Do mayor: pad cálido, bajo suave y melodía con eco.
 local function buildMusic()
-  local beat = 60 / 96
+  local beat = 60 / 72
   local bar = beat * 4
   local bars = 8
   local buffer, samples = makeBuffer(bar * bars)
   local chords = {
-    { root = 45, notes = { 57, 60, 64 } }, -- Am
-    { root = 41, notes = { 53, 57, 60 } }, -- F
-    { root = 48, notes = { 60, 64, 67 } }, -- C
-    { root = 43, notes = { 55, 59, 62 } }, -- G
+    { root = 48, notes = { 60, 64, 67, 71 } }, -- Cmaj7
+    { root = 45, notes = { 57, 60, 64, 67 } }, -- Am7
+    { root = 41, notes = { 53, 57, 60, 64 } }, -- Fmaj7
+    { root = 43, notes = { 55, 59, 62, 64 } }, -- G6
+    { root = 41, notes = { 53, 57, 60, 64 } }, -- Fmaj7
+    { root = 45, notes = { 57, 60, 64, 67 } }, -- Am7
+    { root = 50, notes = { 62, 65, 69, 72 } }, -- Dm7
+    { root = 43, notes = { 55, 59, 62, 64 } }, -- G6
   }
-  local progression = { 1, 2, 3, 4, 1, 2, 4, 4 }
-  local arpPattern = { 1, 2, 3, 2, 1, 3, 2, 3 }
 
   for barIndex = 1, bars do
-    local chord = chords[progression[barIndex]]
+    local chord = chords[barIndex]
     local start = (barIndex - 1) * bar
 
     for _, note in ipairs(chord.notes) do
-      addTone(buffer, start, bar * 0.98, midi(note), 0.042, {
+      addTone(buffer, start, bar * 1.04, midi(note), 0.030, {
         wave = "sine",
-        attack = 0.35,
-        release = 0.55,
-        detune = 0.004,
+        attack = 0.90,
+        release = 1.10,
+        detune = 0.0025,
       })
     end
 
-    addTone(buffer, start, bar * 0.72, midi(chord.root), 0.075, {
+    addTone(buffer, start, bar * 0.95, midi(chord.root), 0.070, {
       wave = "sine",
-      attack = 0.03,
-      release = 0.35,
+      attack = 0.08,
+      release = 0.50,
+    })
+    addTone(buffer, start + 2 * beat, beat * 1.20, midi(chord.root), 0.038, {
+      wave = "tri",
+      attack = 0.02,
+      decay = 1.5,
+      release = 0.25,
     })
 
-    for _, offset in ipairs({ 0, 2 }) do
-      addTone(buffer, start + offset * beat, beat * 0.92, midi(chord.root), 0.115, {
-        wave = "tri",
-        attack = 0.008,
-        decay = 2.4,
-        release = 0.12,
-      })
-    end
+    addTone(buffer, start + 1.5 * beat, beat * 0.90, midi(chord.notes[2] + 12), 0.018, {
+      wave = "epiano",
+      attack = 0.01,
+      decay = 2.2,
+      release = 0.40,
+    })
+    addTone(buffer, start + 3 * beat, beat * 0.80, midi(chord.notes[3] + 12), 0.014, {
+      wave = "epiano",
+      attack = 0.01,
+      decay = 2.5,
+      release = 0.40,
+    })
 
-    for step = 0, 7 do
-      local note = chord.notes[arpPattern[step + 1]] + 12
-      addTone(buffer, start + step * beat / 2, beat * 0.42, midi(note), 0.026, {
-        wave = "softsquare",
-        attack = 0.006,
-        decay = 4.5,
-        release = 0.08,
-      })
-    end
-
-    addKick(buffer, start, 0.075)
-    addKick(buffer, start + 2 * beat, 0.055)
-    for step = 1, 7, 2 do
-      addNoise(buffer, start + step * beat / 2, 0.045, 0.020, 75, 11 + barIndex)
-    end
+    addNoise(buffer, start + beat, 0.16, 0.010, 16, 31 + barIndex)
+    addNoise(buffer, start + 3 * beat, 0.16, 0.008, 18, 41 + barIndex)
   end
 
   local melody = {
-    { bar = 1, beat = 0, note = 69, duration = 1.5 },
-    { bar = 1, beat = 2, note = 76, duration = 1.6 },
-    { bar = 2, beat = 0, note = 65, duration = 1.1 },
-    { bar = 2, beat = 1.5, note = 72, duration = 2.0 },
-    { bar = 3, beat = 0, note = 67, duration = 1.1 },
-    { bar = 3, beat = 1.5, note = 76, duration = 2.0 },
-    { bar = 4, beat = 0, note = 74, duration = 1.5 },
-    { bar = 4, beat = 2, note = 71, duration = 1.5 },
-    { bar = 5, beat = 0, note = 69, duration = 1.2 },
-    { bar = 5, beat = 1.5, note = 72, duration = 1.0 },
-    { bar = 5, beat = 2.5, note = 76, duration = 1.2 },
-    { bar = 6, beat = 0, note = 65, duration = 1.4 },
-    { bar = 6, beat = 2, note = 69, duration = 1.4 },
-    { bar = 7, beat = 0, note = 67, duration = 1.2 },
-    { bar = 7, beat = 1.5, note = 71, duration = 1.0 },
-    { bar = 7, beat = 2.5, note = 74, duration = 1.3 },
-    { bar = 8, beat = 0, note = 76, duration = 1.0 },
-    { bar = 8, beat = 1.25, note = 74, duration = 1.0 },
-    { bar = 8, beat = 2.5, note = 71, duration = 1.3 },
+    { bar = 1, beat = 0, note = 76, duration = 2.0 },
+    { bar = 1, beat = 2.5, note = 71, duration = 1.4 },
+    { bar = 2, beat = 0, note = 72, duration = 1.6 },
+    { bar = 2, beat = 2.0, note = 69, duration = 2.0 },
+    { bar = 3, beat = 0, note = 69, duration = 1.5 },
+    { bar = 3, beat = 2.0, note = 76, duration = 2.0 },
+    { bar = 4, beat = 0.5, note = 74, duration = 1.5 },
+    { bar = 4, beat = 2.5, note = 71, duration = 1.5 },
+    { bar = 5, beat = 0, note = 72, duration = 2.0 },
+    { bar = 5, beat = 2.5, note = 67, duration = 1.3 },
+    { bar = 6, beat = 0, note = 76, duration = 1.5 },
+    { bar = 6, beat = 2.0, note = 72, duration = 2.0 },
+    { bar = 7, beat = 0, note = 74, duration = 1.5 },
+    { bar = 7, beat = 2.0, note = 69, duration = 2.0 },
+    { bar = 8, beat = 0, note = 71, duration = 1.4 },
+    { bar = 8, beat = 1.8, note = 67, duration = 1.4 },
+    { bar = 8, beat = 3.0, note = 74, duration = 1.0 },
   }
   for _, note in ipairs(melody) do
-    addTone(buffer, (note.bar - 1) * bar + note.beat * beat, note.duration, midi(note.note), 0.050, {
-      wave = "tri",
-      attack = 0.025,
-      release = 0.18,
-      vibrato = 0.003,
+    local start = (note.bar - 1) * bar + note.beat * beat
+    addTone(buffer, start, note.duration * beat, midi(note.note), 0.055, {
+      wave = "epiano",
+      attack = 0.02,
+      decay = 0.8,
+      release = 0.50,
+      vibrato = 0.0015,
+    })
+    addTone(buffer, start + 0.42, note.duration * beat * 0.80, midi(note.note), 0.015, {
+      wave = "epiano",
+      attack = 0.05,
+      decay = 1.2,
+      release = 0.60,
     })
   end
 
-  return toSoundData(buffer, samples, 0.82)
+  warmLoop(buffer, samples)
+  return toSoundData(buffer, samples, 0.76)
 end
 
 local function buildCrack()
