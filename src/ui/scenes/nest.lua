@@ -118,7 +118,9 @@ local function drawPasture(app, x, y, w, h, now)
   -- dinosaurios ordenados por rareza; los primeros 6 salen a la pradera
   local list = {}
   for _, dino in ipairs(game.dinos) do
-    list[#list + 1] = dino
+    if not stateModule.isDinoPending(game, dino.id) then
+      list[#list + 1] = dino
+    end
   end
   local rank = {}
   for i, key in ipairs(config.rarityOrder) do
@@ -169,10 +171,17 @@ local function drawPasture(app, x, y, w, h, now)
   if #list == 0 then
     theme.setFont(10)
     theme.setColor(theme.colors.text, 1)
-    love.graphics.printf("Aún no hay dinosaurios en la pradera", ix, iy + 128, iw, "center")
-    theme.setFont(8)
-    theme.setColor(theme.colors.textDim, 1)
-    love.graphics.printf("Incuba un huevo y aparecerá aquí.", ix, iy + 146, iw, "center")
+    if #game.pendingReveals > 0 then
+      love.graphics.printf("Huevo listo para abrir", ix, iy + 128, iw, "center")
+      theme.setFont(8)
+      theme.setColor(theme.colors.textDim, 1)
+      love.graphics.printf("Pulsa ABRIR HUEVOS en el panel de huevos.", ix, iy + 146, iw, "center")
+    else
+      love.graphics.printf("Aún no hay dinosaurios en la pradera", ix, iy + 128, iw, "center")
+      theme.setFont(8)
+      theme.setColor(theme.colors.textDim, 1)
+      love.graphics.printf("Incuba un huevo y aparecerá aquí.", ix, iy + 146, iw, "center")
+    end
   end
 
   -- etiqueta y contador
@@ -345,10 +354,23 @@ local function drawIncubatorCard(app, game, index, x, y, w, h, now)
       cross = slot.egg.kind == "cruce",
     })
     theme.setFont(8)
-    theme.setColor(theme.colors.textDim, 1)
-    love.graphics.printf(progress >= 1 and "Abriendo…" or theme.fmtTime(math.max(0, slot.finishAt - now)),
-      x + 44, y + 32, w - 50, "left")
-    widgets.progressBar(x + 8, y + 58, w - 16, 5, progress, theme.colors.amber, {})
+    if progress >= 1 then
+      theme.setColor(theme.colors.green, 1)
+      love.graphics.printf("LISTO", x + 44, y + 32, w - 50, "left")
+      widgets.button(app, x + 38, y + 48, w - 44, 22, "ABRIR", {
+        style = "primary",
+        font = 8,
+        tooltip = "Abrir este huevo.",
+        onClick = function()
+          app:openNextReveal(slot.egg.id)
+        end,
+      })
+    else
+      theme.setColor(theme.colors.textDim, 1)
+      love.graphics.printf(theme.fmtTime(math.max(0, slot.finishAt - now)),
+        x + 44, y + 32, w - 50, "left")
+      widgets.progressBar(x + 8, y + 58, w - 16, 5, progress, theme.colors.amber, {})
+    end
   end
 end
 
@@ -356,6 +378,7 @@ function nest.draw(app)
   local game = app.game
   local now = app.now
   local snap = hatch.snapshot(game)
+  local pending = #game.pendingReveals
   local x = app.layout.contentX
   local y = app.layout.contentY
 
@@ -377,10 +400,22 @@ function nest.draw(app)
   love.graphics.print("Huevos en el nido", x + 10, eggsY + 8)
   theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.printf(#game.eggs .. " / " .. economy.nestCapacity(game), x + 350, eggsY + 10, 92, "right")
-  if #game.eggs > 8 then
-    theme.setColor(theme.colors.gold, 1)
-    love.graphics.printf("rueda ↓", x + 350, eggsY + 24, 92, "right")
+  if pending > 0 then
+    love.graphics.printf(#game.eggs .. " / " .. economy.nestCapacity(game), x + 150, eggsY + 10, 76, "right")
+    widgets.button(app, x + 236, eggsY + 5, 208, 24, "ABRIR HUEVOS (" .. pending .. ")", {
+      style = "primary",
+      font = 8,
+      tooltip = "Abrir el siguiente huevo listo.",
+      onClick = function()
+        app:openNextReveal()
+      end,
+    })
+  else
+    love.graphics.printf(#game.eggs .. " / " .. economy.nestCapacity(game), x + 350, eggsY + 10, 92, "right")
+    if #game.eggs > 8 then
+      theme.setColor(theme.colors.gold, 1)
+      love.graphics.printf("rueda ↓", x + 350, eggsY + 24, 92, "right")
+    end
   end
 
   local columns = 4

@@ -89,19 +89,20 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 ## Cómo se juega
 
 1. El nido genera huevos automáticamente. Haz clic en un huevo para incubarlo.
-2. Al abrirlo nace un dinosaurio. Los adultos producen ámbar de forma pasiva.
-3. Libera ejemplares para obtener esencia.
-4. Compra mejoras con ámbar y esencia: ritmo del nido, incubadoras, incubación, capacidad, suerte y producción.
-5. Cruza dos adultos de la misma especie. El simulador muestra la distribución exacta de los genes visibles antes de confirmar.
-6. Completa combinaciones en el Dinodex: patrón, color primario, cresta y mutación.
-7. Cuando quieras, haz la Gran Migración: reinicia la colonia, conserva hasta 3 fundadores y gana puntos de legado permanentes.
+2. Cuando termina la incubación, pulsa **ABRIR HUEVOS** en el Nido. La animación no se abre sola.
+3. Al abrirlo nace un dinosaurio. Los adultos producen ámbar de forma pasiva.
+4. Libera ejemplares para obtener esencia.
+5. Compra mejoras con ámbar y esencia: ritmo del nido, incubadoras, incubación, capacidad, suerte y producción.
+6. Cruza dos adultos de la misma especie. El simulador muestra la distribución exacta de los genes visibles antes de confirmar.
+7. Completa combinaciones en el Dinodex: patrón, color primario, cresta y mutación.
+8. Cuando quieras, haz la Gran Migración: reinicia la colonia, conserva hasta 3 fundadores y gana puntos de legado permanentes.
 
 ## Transparencia
 
 - El botón **Ver probabilidades exactas** del Nido muestra las tasas base y efectivas del motor, las garantías y cada mutación con su probabilidad.
 - Las barras de pity están siempre visibles. No se reinician con el prestigio.
 - El **Registro** guarda fecha, origen, rareza, especie, genes, mutación, garantías, semilla y rango de tiradas de cada apertura. Compara las tasas reales del nido con las teóricas.
-- La apertura no usa destellos que insinúen rarezas falsas. La cáscara se agrieta poco a poco durante 2,35 segundos, se abre en dos mitades y el dinosaurio sale con un efecto de sonido. Se puede saltar con clic, `Esc` o `Espacio`; el modo tranquilo la desactiva.
+- La apertura no usa destellos que insinúen rarezas falsas. La cáscara se agrieta poco a poco durante 2,35 segundos, se abre en dos mitades y el dinosaurio sale con un efecto de sonido. El botón **CLIC PARA SALTAR** queda centrado y también responde a `Esc` o `Espacio`; el modo tranquilo la desactiva.
 - No hay anuncios, compras, moneda real, urgencia artificial ni falsos “casi lo consigues”. El modo tranquilo desactiva animaciones y el tope diario es opcional.
 
 ## Ajustar `config.lua`

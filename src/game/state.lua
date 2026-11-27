@@ -292,6 +292,7 @@ function state.rollNestReveal(s, egg, now)
   local reveal = {
     source = "nido",
     createdAt = now,
+    eggId = egg.id,
     rarity = rarity,
     genes = copyPhenotype(genotype.phenotype),
     alleles = genotype.alleles,
@@ -362,6 +363,7 @@ function state.rollCrossReveal(s, egg, now)
   return pushReveal(s, {
     source = "cruce",
     createdAt = now,
+    eggId = egg.id,
     rarity = child.rarity,
     genes = copyPhenotype(child.genes),
     alleles = child.alleles,
@@ -462,6 +464,15 @@ function state.findDino(s, dinoId)
     end
   end
   return nil
+end
+
+function state.isDinoPending(s, dinoId)
+  for _, reveal in ipairs(s.pendingReveals or {}) do
+    if reveal.dinoId == dinoId then
+      return true
+    end
+  end
+  return false
 end
 
 function state.freeIncubator(s)

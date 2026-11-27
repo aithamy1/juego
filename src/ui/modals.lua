@@ -60,7 +60,7 @@ local function drawHelp(app, modal)
   love.graphics.print("El bucle", x + 28, y + 94)
   theme.setFont(11)
   theme.setColor(theme.colors.textDim, 1)
-  love.graphics.printf("El nido produce huevos. Los incubas, nacen dinosaurios y los adultos generan ámbar de forma pasiva. Con ámbar compras mejoras; con esencia (al liberar ejemplares) amplías el nido y mejoras la suerte. Los cruces heredan genes con proporciones mendelianas y el Dinodex registra cada combinación nueva. Cuando quieras, la Gran Migración reinicia la colonia a cambio de legado permanente.",
+  love.graphics.printf("El nido produce huevos. Los incubas y, cuando termina la incubación, pulsas ABRIR HUEVOS para abrirlos. Nacen dinosaurios y los adultos generan ámbar de forma pasiva. Con ámbar compras mejoras; con esencia (al liberar ejemplares) amplías el nido y mejoras la suerte. Los cruces heredan genes con proporciones mendelianas y el Dinodex registra cada combinación nueva. Cuando quieras, la Gran Migración reinicia la colonia a cambio de legado permanente.",
     x + 28, y + 118, 784, "left")
 
   theme.setFont(13)
@@ -283,16 +283,26 @@ local function drawRevealResult(app, modal, reveal, x, y)
     theme.setFont(18)
     theme.setColor(theme.colors.text, fade)
     love.graphics.printf(bursting and "Saliendo del huevo" or "Abriendo huevo",
-      x + 40, y + 84, 640, "center")
+      x + 60, y + 84, 640, "center")
     theme.setFont(11)
     theme.setColor(theme.colors.muted, fade)
     love.graphics.printf(bursting
       and "El resultado se mostrará tal cual. Nada de destellos que sugieran rareza falsa."
       or "La cáscara se rompe poco a poco. Nada de destellos que sugieran rareza falsa.",
-      x + 100, y + 440, 640, "center")
-    theme.setFont(10)
-    theme.setColor(theme.colors.amber, fade)
-    love.graphics.printf("Clic para saltar", x + 120, y + 480, 600, "center")
+      x + 60, y + 440, 640, "center")
+    local skipW, skipH = 260, 36
+    local skipX = x + (760 - skipW) / 2
+    widgets.button(app, skipX, y + 472, skipW, skipH, "CLIC PARA SALTAR", {
+      style = "primary",
+      font = 11,
+      onClick = function()
+        modal.skipped = true
+        modal.revealStart = love.timer.getTime() - config.time.revealResult - 1
+      end,
+    })
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, fade)
+    love.graphics.printf("También puedes pulsar Espacio", x + 60, y + 516, 640, "center")
     return
   end
 
@@ -494,7 +504,7 @@ local function drawOffline(app, modal)
   else
     theme.setFont(10)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.printf("Los huevos pendientes de abrir aparecerán a continuación.",
+    love.graphics.printf("Al cerrar este resumen, pulsa ABRIR HUEVOS en el Nido para abrir los huevos pendientes.",
       x + 40, y + 318, 600, "left")
   end
   widgets.button(app, x + 480, y + 368, 160, 38, "Continuar", {

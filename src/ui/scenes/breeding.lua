@@ -55,7 +55,7 @@ local function filteredDinos(app)
   local filters = app.filters
   local list = {}
   for _, dino in ipairs(game.dinos) do
-    local ok = true
+    local ok = not stateModule.isDinoPending(game, dino.id)
     if filters.species ~= "todas" and dino.species ~= filters.species then
       ok = false
     end
@@ -350,8 +350,13 @@ function breeding.draw(app)
   local rows = math.max(1, math.ceil(math.max(1, #list) / columns))
   widgets.scroll(app, "breeding_grid", x, y + 54, 462, 462, rows * (cardH + gapY), function(offset)
     if #list == 0 then
-      widgets.emptyState(x, y + 78, 462, 140, "Sin ejemplares con esos filtros",
-        "Prueba otros filtros o incuba huevos en el Nido.")
+      if #game.pendingReveals > 0 then
+        widgets.emptyState(x, y + 78, 462, 140, "Huevo listo para abrir",
+          "Pulsa ABRIR HUEVOS en el Nido para ver el resultado.")
+      else
+        widgets.emptyState(x, y + 78, 462, 140, "Sin ejemplares con esos filtros",
+          "Prueba otros filtros o incuba huevos en el Nido.")
+      end
       return
     end
     for index, dino in ipairs(list) do

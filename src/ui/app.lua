@@ -66,6 +66,7 @@ app.layout = {
 function app.new(game)
   local self = setmetatable({}, app)
   self.game = game
+  self.pendingCount = #game.pendingReveals
   self.scene = "nest"
   self.now = os.time()
   self.mouse = { x = -1, y = -1, hand = false, down = false }
@@ -125,6 +126,32 @@ function app:openModal(kind, data)
   self.tooltip = nil
 end
 
+function app:openNextReveal(eggId)
+  if self.modal then
+    return false
+  end
+  local reveal = nil
+  if eggId then
+    for _, candidate in ipairs(self.game.pendingReveals) do
+      if candidate.eggId == eggId then
+        reveal = candidate
+        break
+      end
+    end
+  end
+  reveal = reveal or self.game.pendingReveals[1]
+  if not reveal then
+    self:toast("No hay huevos listos para abrir.", theme.colors.muted)
+    return false
+  end
+  self:openModal("reveal", {
+    reveal = reveal,
+    revealStart = love.timer.getTime(),
+    skipped = self.game.settings.calm,
+  })
+  return true
+end
+
 function app:closeModal()
   if self.modal and self.modal.kind == "help" then
     self.game.meta.firstRun = false
@@ -160,13 +187,11 @@ function app:update(dt, now)
     self:toast("El huevo de cruce está listo en el nido.", theme.colors.essence)
   end
 
-  if not self.modal and self.game.pendingReveals[1] then
-    self:openModal("reveal", {
-      reveal = self.game.pendingReveals[1],
-      revealStart = love.timer.getTime(),
-      skipped = self.game.settings.calm,
-    })
+  local pending = #self.game.pendingReveals
+  if pending > self.pendingCount and not self.modal then
+    self:toast("Huevo listo. Pulsa ABRIR HUEVOS en el Nido.", theme.colors.amber)
   end
+  self.pendingCount = pending
 
   local reminder = self.game.settings.reminder or 0
   if reminder > 0 and not self.modal then
@@ -271,24 +296,42 @@ function app:navInfo(key)
   local now = self.now
   if key == "nest" then
     local capacity = economy.nestCapacity(game)
+    local pending = #game.pendingReveals
+    local sub = #game.eggs .. " / " .. capacity .. " huevos"
+    if pending > 0 then
+      sub = pending .. " huevo" .. (pending > 1 and "s" or "") .. " listo" .. (pending > 1 and "s" or "")
+    end
     return {
       title = "Nido",
-      sub = #game.eggs .. " / " .. capacity .. " huevos",
+      sub = sub,
       bar = #game.eggs / capacity,
-      barColor = theme.colors.amber,
+      barColor = pending > 0 and theme.colors.gold or theme.colors.amber,
       icon = "nest",
     }
   elseif key == "breeding" then
     local adults = 0
+    local visible = 0
+    local pending = 0
     for _, dino in ipairs(game.dinos) do
-      if now >= (dino.adultAt or 0) then
-        adults = adults + 1
+      if stateModule.isDinoPending(game, dino.id) then
+        pending = pending + 1
+      else
+        visible = visible + 1
+        if now >= (dino.adultAt or 0) then
+          adults = adults + 1
+        end
       end
     end
-    local total = math.max(1, #game.dinos)
+    local total = math.max(1, visible)
+    local sub = visible .. (visible == 1 and " ejemplar" or " ejemplares")
+      .. " · " .. adults .. (adults == 1 and " adulto" or " adultos")
+    if pending > 0 then
+      sub = visible .. (visible == 1 and " ejemplar" or " ejemplares")
+        .. " · " .. pending .. " por abrir"
+    end
     return {
       title = "Criadero",
-      sub = #game.dinos .. " ejemplares · " .. adults .. " adultos",
+      sub = sub,
       bar = adults / total,
       barColor = theme.colors.green,
       icon = "breeding",
