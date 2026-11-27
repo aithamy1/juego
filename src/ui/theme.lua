@@ -5,6 +5,7 @@ local theme = { colors = {}, fonts = {} }
 
 theme.colorblind = false
 theme.textBoost = 0
+theme.uiScale = 1.0
 
 local colorblindRarity = {
   common = { 0.86, 0.86, 0.82 },
@@ -53,7 +54,7 @@ theme.colors = {
   black = { 0, 0, 0 },
 }
 
-local sizes = { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 26, 30, 34, 40, 48 }
+local sizes = { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 30, 32, 34, 36, 40, 44, 48 }
 
 local function mix(a, b, t)
   return {
@@ -98,12 +99,19 @@ function theme.fontFor(size, bold)
   if theme.textBoost > 0 and effective <= 12 then
     effective = effective + 1
   end
+  if theme.uiScale and theme.uiScale ~= 1 then
+    effective = math.max(8, math.floor(effective * theme.uiScale + 0.5))
+  end
   local fonts = bold and theme.boldFonts or theme.fonts
   return fonts[effective] or fonts[size] or fonts[14] or theme.fonts[14]
 end
 
 function theme.setLargeText(value)
   theme.textBoost = value and 1 or 0
+end
+
+function theme.setUiScale(value)
+  theme.uiScale = tonumber(value) or 1.0
 end
 
 function theme.setColorblind(value)

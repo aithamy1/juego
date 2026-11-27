@@ -304,10 +304,47 @@ local function drawDetail(app, dino, x, y, w, h, now)
 
   theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("Producción", x + 12, y + 322)
+  love.graphics.print("Producción", x + 12, y + 318)
   theme.setFont(12)
   theme.setColor(theme.colors.amber, 1)
-  love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s", x + 90, y + 320)
+  love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s", x + 90, y + 316)
+
+  local suggestedRole = stateModule.recommendRole(dino)
+  local suggestedHabitat = stateModule.recommendHabitat(app.game, dino, suggestedRole)
+  local optimal = dino.role == suggestedRole and dino.habitat == suggestedHabitat
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Sugerido", x + 12, y + 336)
+  theme.setColor(optimal and theme.colors.green or theme.colors.teal, 1)
+  love.graphics.print(config.roles[suggestedRole].short .. " · "
+    .. (suggestedHabitat and config.habitats[suggestedHabitat].short or "Sin hueco"), x + 68, y + 336)
+  widgets.button(app, x + 176, y + 331, 68, 20, optimal and "ÓPTIMO" or "APLICAR", {
+    style = optimal and "ghost" or "teal",
+    font = 7,
+    disabled = optimal,
+    tooltip = optimal and "Esta combinación ya es la recomendada."
+      or (suggestedHabitat and "El rol se elige por su estadística más alta; el hábitat acompaña al rol y respeta la capacidad."
+        or "Los tres hábitats están llenos; se aplicará solo el rol."),
+    onClick = function()
+      local okRole, roleErr = stateModule.setDinoRole(app.game, dino.id, suggestedRole)
+      local okHabitat, habitatErr = nil, nil
+      if suggestedHabitat then
+        okHabitat, habitatErr = stateModule.setDinoHabitat(app.game, dino.id, suggestedHabitat)
+      end
+      if okRole or okHabitat then
+        local parts = {}
+        if okRole then
+          parts[#parts + 1] = config.roles[suggestedRole].name
+        end
+        if okHabitat then
+          parts[#parts + 1] = config.habitats[suggestedHabitat].short
+        end
+        app:toast("Sugerencia aplicada: " .. table.concat(parts, " · ") .. ".", theme.colors.teal)
+      else
+        app:toast(habitatErr or roleErr or "No se pudo aplicar.", theme.colors.red)
+      end
+    end,
+  })
 
   widgets.cycle(app, x + 12, y + 358, 112, 38, "Rol", dino.role or "ninguno", roleOptions, function(value)
     local ok, err = stateModule.setDinoRole(app.game, dino.id, value)

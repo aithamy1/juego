@@ -16,9 +16,13 @@ local suppressSaveOnQuit = false
 
 local function scaling()
   local width, height = love.graphics.getDimensions()
-  local scale = math.min(width / config.window.width, height / config.window.height)
-  local offsetX = (width - config.window.width * scale) / 2
-  local offsetY = (height - config.window.height * scale) / 2
+  local safe = (game and game.settings and game.settings.safeZone) or 0
+  local margin = safe * math.min(width, height)
+  local availableW = width - margin * 2
+  local availableH = height - margin * 2
+  local scale = math.min(availableW / config.window.width, availableH / config.window.height)
+  local offsetX = margin + (availableW - config.window.width * scale) / 2
+  local offsetY = margin + (availableH - config.window.height * scale) / 2
   return scale, offsetX, offsetY
 end
 
@@ -141,6 +145,7 @@ function love.load()
 
   theme.setColorblind(game.settings.colorblind)
   theme.setLargeText(game.settings.largeText)
+  theme.setUiScale(game.settings.uiTextScale)
   local displayChanged, displayOk = applyDisplaySettings(game.settings)
   if not displayOk then
     print("No se pudo aplicar el tamaño de ventana guardado.")
@@ -196,7 +201,7 @@ function love.load()
   if offlineSummary and (offlineSummary.credited >= 30 or offlineSummary.hatches > 0) then
     uiApp:openModal("offline", { summary = offlineSummary })
   elseif game.meta.firstRun then
-    uiApp:openModal("help", {})
+    uiApp:openModal("guide", {})
   end
 
   local mx, my = toCanvas(love.mouse.getPosition())
@@ -226,6 +231,7 @@ function love.update(dt)
   end
   theme.setColorblind(game.settings.colorblind)
   theme.setLargeText(game.settings.largeText)
+  theme.setUiScale(game.settings.uiTextScale)
 
   local pad = firstGamepad()
   if pad and pad.isGamepad and pad:isGamepad() then
@@ -315,7 +321,7 @@ function love.draw()
   end
   love.graphics.setCanvas()
 
-  love.graphics.clear(0, 0, 0, 1)
+  love.graphics.clear(theme.colors.bg[1], theme.colors.bg[2], theme.colors.bg[3], 1)
   local scale, offsetX, offsetY = scaling()
   love.graphics.setColor(1, 1, 1, 1)
   love.graphics.draw(canvas, offsetX, offsetY, 0, scale, scale)

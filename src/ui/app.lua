@@ -244,6 +244,11 @@ function app:update(dt, now)
     local label = event.kind == "achievement" and "Logro" or "Objetivo"
     self:toast(label .. ": " .. event.name .. (event.reward and (" · " .. event.reward) or ""), theme.colors.gold)
   end
+  local guideEvents = stateModule.guideEvents(self.game)
+  if #guideEvents > 0 then
+    local step = guideEvents[#guideEvents]
+    self:toast("Guía: " .. step.name .. " completado.", theme.colors.teal)
+  end
 
   local crossJob = self.game.cross
   if crossJob then
@@ -342,6 +347,29 @@ function app:drawHeader()
   theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.print("v" .. config.version, 557, 30)
+
+  local guideDone, guideTotal = stateModule.guideProgress(game)
+  local guideX, guideY = 1112, 10
+  local guideHover = widgets.hover(self, guideX, guideY, 44, 44)
+  if guideHover then
+    self.tooltip = "Primeros pasos: " .. guideDone .. " de " .. guideTotal .. ". Pulsa para abrir la guía."
+    self.mouse.hand = true
+  end
+  if widgets.click(self, guideX, guideY, 44, 44) then
+    self:openModal("guide", {})
+  end
+  theme.panel(guideX, guideY, 44, 44, {
+    color = guideHover and theme.colors.panel3 or theme.colors.panel2,
+    borderColor = guideDone >= guideTotal and theme.colors.green or theme.colors.teal,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  theme.setFont(18, true)
+  theme.setColor(theme.colors.teal, 1)
+  love.graphics.printf("?", guideX, guideY + 4, 44, "center")
+  widgets.progressBar(guideX + 7, guideY + 34, 30, 4,
+    guideTotal > 0 and guideDone / guideTotal or 0,
+    guideDone >= guideTotal and theme.colors.green or theme.colors.teal, {})
 
   local trophyX, trophyY = 1168, 10
   local trophyHover = widgets.hover(self, trophyX, trophyY, 44, 44)
@@ -1024,8 +1052,8 @@ function app:drawToasts()
   local fade = math.min(1, (4.8 - (time - latest.at)) / 0.5)
   local w = 430
   local h = 40
-  local x = 760
-  local y = 10
+  local x = 425
+  local y = 664
   theme.panel(x, y, w, h, {
     color = theme.colors.panel,
     borderColor = theme.colors.goldDark,

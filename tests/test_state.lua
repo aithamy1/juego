@@ -185,24 +185,74 @@ return function(t)
     t.assertNear(economy.productionMultiplier(s), 1 + config.dinodex.milestoneBonus, 1e-9)
   end)
 
-  t.test("los ajustes de música, efectos y movimiento se guardan al cargar", function()
+  t.test("la recomendación de rol y hábitat sigue las estadísticas y la capacidad", function()
+    local now = 1800000000
+    local s = state.new(1, now)
+    local dino = makeAdult(s, now, "triceratops")
+    dino.functional = { productivity = 5, fertility = 1, resilience = 3, luck = 1 }
+    t.assertEqual(state.recommendRole(dino), "recolector")
+    t.assertEqual(state.recommendHabitat(s, dino, "recolector"), "bosque")
+    dino.functional = { productivity = 1, fertility = 1, resilience = 3, luck = 5 }
+    t.assertEqual(state.recommendRole(dino), "explorador")
+    t.assertEqual(state.recommendHabitat(s, dino, "explorador"), "volcan")
+    dino.functional = { productivity = 1, fertility = 5, resilience = 3, luck = 1 }
+    t.assertEqual(state.recommendRole(dino), "incubador")
+    t.assertEqual(state.recommendHabitat(s, dino, "incubador"), "costa")
+
+    local s2 = state.new(2, now)
+    for _ = 1, 3 do
+      local resident = makeAdult(s2, now, "triceratops")
+      resident.habitat = "bosque"
+    end
+    local wanderer = makeAdult(s2, now, "stegosaurus")
+    t.assertEqual(state.recommendHabitat(s2, wanderer, "recolector"), "volcan")
+  end)
+
+  t.test("la guía de primeros pasos avanza y no repite eventos", function()
+    local now = 1800000000
+    local s = state.new(1, now)
+    t.assertEqual(#state.guideList(s), #config.onboardingOrder)
+    local done, _, nextStep = state.guideProgress(s)
+    t.assertEqual(done, 0)
+    t.assertEqual(nextStep.id, "primer_huevo")
+    s.stats.opened = 1
+    local events = state.guideEvents(s)
+    t.assertEqual(#events, 1)
+    t.assertEqual(events[1].id, "primer_huevo")
+    t.assertEqual(#state.guideEvents(s), 0)
+    s.guide.seen = {}
+    state.normalize(s)
+    t.assertEqual(#state.guideEvents(s), 0)
+  end)
+
+  t.test("los ajustes de audio, movimiento, escala y zona segura se guardan al cargar", function()
     local now = 1800000000
     local s = state.new(987, now)
     t.assertTrue(s.settings.music)
     t.assertTrue(s.settings.sfx)
     t.assertFalse(s.settings.reduceMotion)
+    t.assertNear(s.settings.uiTextScale, 1.0, 1e-9)
+    t.assertNear(s.settings.safeZone, 0, 1e-9)
     state.setSetting(s, "music", false)
     state.setSetting(s, "sfx", false)
     state.setSetting(s, "reduceMotion", true)
+    state.setSetting(s, "uiTextScale", 1.1)
+    state.setSetting(s, "safeZone", 0.04)
     t.assertFalse(s.settings.music)
     t.assertFalse(s.settings.sfx)
     t.assertTrue(s.settings.reduceMotion)
+    t.assertNear(s.settings.uiTextScale, 1.1, 1e-9)
+    t.assertNear(s.settings.safeZone, 0.04, 1e-9)
     s.settings.music = nil
     s.settings.sfx = nil
     s.settings.reduceMotion = nil
+    s.settings.uiTextScale = nil
+    s.settings.safeZone = nil
     state.normalize(s)
     t.assertTrue(s.settings.music)
     t.assertTrue(s.settings.sfx)
     t.assertFalse(s.settings.reduceMotion)
+    t.assertNear(s.settings.uiTextScale, 1.0, 1e-9)
+    t.assertNear(s.settings.safeZone, 0, 1e-9)
   end)
 end

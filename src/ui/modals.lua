@@ -87,6 +87,14 @@ local function drawHelp(app, modal)
   love.graphics.printf("En Ajustes puedes activar el modo tranquilo, un recordatorio opcional cada 60 o 90 minutos y un tope diario de huevos. En Opciones ajustas volumen, accesibilidad, mando, copias de seguridad y liberación de duplicados. El juego sigue funcionando sin conexión y guarda el progreso hasta 8 horas de ausencia.",
     x + 28, y + 456, 784, "left")
 
+  widgets.button(app, x + 480, y + 540, 170, 36, "PRIMEROS PASOS", {
+    style = "ghost",
+    font = 8,
+    onClick = function()
+      app:closeModal()
+      app:openModal("guide", {})
+    end,
+  })
   closeButton(app, x + 660, y + 540, 152, 36, "Entendido")
 end
 
@@ -1130,6 +1138,111 @@ local function drawPrestigeTree(app, modal)
   closeButton(app, x + 760, y + 560, 150, 36, "Cerrar")
 end
 
+local function drawGuide(app, modal)
+  local game = app.game
+  local x, y = widgets.modalFrame(app, "Primeros pasos",
+    "8 hitos para aprender el bucle. Se guardan con la partida.", 920, 560)
+  local list = stateModule.guideList(game)
+  local done, total, nextStep = stateModule.guideProgress(game)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf(done .. " / " .. total .. " completados", x + 30, y + 64, 860, "right")
+  widgets.progressBar(x + 30, y + 82, 860, 6, done / math.max(1, total),
+    done >= total and theme.colors.green or theme.colors.teal, {})
+
+  local function go(step)
+    app:closeModal()
+    if step.selectAdult then
+      local now = app.now or os.time()
+      local chosen = nil
+      for _, dino in ipairs(game.dinos) do
+        if not stateModule.isDinoPending(game, dino.id) then
+          local needs = (step.id == "primer_rol" and not dino.role)
+            or (step.id == "primer_habitat" and not dino.habitat)
+          if needs then
+            chosen = dino.id
+            break
+          end
+          if now >= (dino.adultAt or 0) and not chosen then
+            chosen = dino.id
+          end
+        end
+      end
+      if chosen then
+        app.selectedDino = chosen
+      end
+    end
+    app:goto(step.scene)
+    if step.modal then
+      app:openModal(step.modal, {})
+    end
+  end
+
+  local colW = 410
+  for index, step in ipairs(list) do
+    local col = (index - 1) % 2
+    local row = math.floor((index - 1) / 2)
+    local cx = x + 30 + col * (colW + 40)
+    local cy = y + 100 + row * 94
+    local hover = widgets.hover(app, cx, cy, colW, 86)
+    if hover then
+      app.mouse.hand = true
+      app.tooltip = "Ir a " .. step.name .. "."
+    end
+    if hover and widgets.click(app, cx, cy, colW, 86) then
+      go(step)
+    end
+    local isNext = nextStep and nextStep.id == step.id
+    theme.panel(cx, cy, colW, 86, {
+      color = hover and theme.colors.panel3 or theme.colors.panel2,
+      borderColor = step.completed and theme.colors.green
+        or (isNext and theme.colors.teal or theme.colors.borderSoft),
+      shadowSize = 2,
+      borderWidth = isNext and 2 or 1,
+    })
+    theme.setColor(step.completed and theme.colors.green or theme.colors.bg, 1)
+    love.graphics.rectangle("fill", cx + 8, cy + 8, 18, 18)
+    if step.completed then
+      theme.setColor(theme.colors.ink, 1)
+      theme.setFont(7, true)
+      love.graphics.printf("OK", cx + 8, cy + 13, 18, "center")
+    else
+      theme.setColor(theme.colors.borderSoft, 1)
+      love.graphics.rectangle("line", cx + 8.5, cy + 8.5, 17, 17)
+    end
+    theme.setFont(10)
+    theme.setColor(step.completed and theme.colors.textDim or theme.colors.text, 1)
+    love.graphics.print(step.name, cx + 34, cy + 6)
+    if step.completed then
+      theme.setFont(7)
+      theme.setColor(theme.colors.green, 1)
+      love.graphics.printf("HECHO", cx + 300, cy + 8, 100, "right")
+    elseif isNext then
+      theme.setFont(7)
+      theme.setColor(theme.colors.teal, 1)
+      love.graphics.printf("SIGUIENTE", cx + 300, cy + 8, 100, "right")
+    end
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf(step.desc, cx + 34, cy + 22, colW - 44, "left")
+    widgets.progressBar(cx + 34, cy + 55, 280, 5, step.value / math.max(1, step.target),
+      step.completed and theme.colors.green or (isNext and theme.colors.teal or theme.colors.border), {})
+    theme.setFont(8)
+    theme.setColor(theme.colors.textDim, 1)
+    love.graphics.printf(step.value .. " / " .. step.target, cx + 320, cy + 52, 80, "right")
+  end
+
+  widgets.button(app, x + 500, y + 500, 160, 34, "CÓMO SE JUEGA", {
+    style = "ghost",
+    font = 8,
+    onClick = function()
+      app:closeModal()
+      app:openModal("help", {})
+    end,
+  })
+  closeButton(app, x + 680, y + 500, 200, 34)
+end
+
 local function drawOptions(app, modal)
   local game = app.game
   local x, y = widgets.modalFrame(app, "Opciones",
@@ -1199,6 +1312,31 @@ local function drawOptions(app, modal)
       stateModule.setSetting(game, "reduceMotion", value)
       app:toast(value and "Movimiento reducido." or "Animaciones completas.", theme.colors.textDim)
     end, { tooltip = "Sin sacudidas, saltos ni nubes en movimiento." })
+  local textScaleOptions = {}
+  for _, value in ipairs(config.settings.uiTextScaleOptions) do
+    textScaleOptions[#textScaleOptions + 1] = {
+      value = value,
+      label = math.floor(value * 100) .. " %",
+    }
+  end
+  widgets.cycle(app, columns[2] + 12, top + 154, colW - 24, 40, "Escala de UI",
+    game.settings.uiTextScale, textScaleOptions, function(value)
+      stateModule.setSetting(game, "uiTextScale", value)
+      theme.setUiScale(value)
+      app:toast("Escala de UI: " .. math.floor(value * 100) .. " %.", theme.colors.textDim)
+    end, { tooltip = "Cambia el tamaño de textos y controles dentro del lienzo." })
+  local safeOptions = {}
+  for _, value in ipairs(config.settings.safeZoneOptions) do
+    safeOptions[#safeOptions + 1] = {
+      value = value,
+      label = math.floor(value * 100) .. " %",
+    }
+  end
+  widgets.cycle(app, columns[2] + 12, top + 202, colW - 24, 40, "Zona segura",
+    game.settings.safeZone, safeOptions, function(value)
+      stateModule.setSetting(game, "safeZone", value)
+      app:toast("Zona segura: " .. math.floor(value * 100) .. " %.", theme.colors.textDim)
+    end, { tooltip = "Margen para TVs y pantallas con overscan. 0 % en monitores." })
   local scaleOptions = {}
   for _, value in ipairs(config.settings.uiScaleOptions) do
     scaleOptions[#scaleOptions + 1] = {
@@ -1206,13 +1344,13 @@ local function drawOptions(app, modal)
       label = math.floor(value * 100) .. " %",
     }
   end
-  widgets.cycle(app, columns[2] + 12, top + 154, colW - 24, 40, "Escala de ventana",
+  widgets.cycle(app, columns[2] + 12, top + 250, colW - 24, 40, "Escala de ventana",
     game.settings.uiScale, scaleOptions, function(value)
       stateModule.setSetting(game, "uiScale", value)
       app.displayDirty = true
       app:toast("Escala de ventana: " .. math.floor(value * 100) .. " %.", theme.colors.textDim)
-    end, { tooltip = "El lienzo se adapta a la ventana." })
-  widgets.toggle(app, columns[2] + 12, top + 206, colW - 24, 30, "Pantalla completa",
+    end, { tooltip = "El lienzo se adapta a la ventana; no cambia la densidad de la UI." })
+  widgets.toggle(app, columns[2] + 12, top + 298, colW - 24, 30, "Pantalla completa",
     game.settings.fullscreen, function(value)
       stateModule.setSetting(game, "fullscreen", value)
       app.displayDirty = true
@@ -1220,8 +1358,8 @@ local function drawOptions(app, modal)
     end, { tooltip = "Usa el escritorio completo." })
   theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.printf("La escala se limita al tamaño del escritorio. Mando: stick izquierdo mueve el cursor; A pulsa; B vuelve; LB/RB cambian de pestaña; Start guarda.",
-    columns[2] + 12, top + 244, colW - 24, "left")
+  love.graphics.printf("La escala de UI cambia textos y controles; la de ventana cambia el tamaño de la ventana. La zona segura añade margen para TVs. Mando: stick izquierdo mueve el cursor; A pulsa; B vuelve; LB/RB cambian de pestaña; Start guarda.",
+    columns[2] + 12, top + 338, colW - 24, "left")
 
   theme.panel(columns[3], top, colW, 420, {
     color = theme.colors.panel,
@@ -1690,6 +1828,7 @@ function modals.draw(app, modal)
     goals = drawGoals,
     compare = drawCompare,
     dino_genes = drawDinoGenes,
+    guide = drawGuide,
   }
   local handler = handlers[modal.kind]
   if handler then

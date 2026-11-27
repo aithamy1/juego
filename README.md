@@ -78,9 +78,11 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 
 La cabecera de cada escena muestra una **acción recomendada** (abrir huevos, incubar, asignar roles o mejorar). El panel derecho cambia según la escena: mejoras rápidas en Nido y Criadero, resumen en Mejoras, colección en Dinodex, registro en Registro y controles en Ajustes. Los tooltips aparecen tras un breve retardo, las compras muestran **LISTO** o **faltan X**, y el dorado queda para el ámbar, las acciones principales y las rarezas.
 
+El botón **?** de la cabecera abre **Primeros pasos**, una guía de 8 hitos (abrir huevos, asignar rol y hábitat, cruzar, decorar, legado y migrar) que se guarda con la partida. Cada hito completado avisa una sola vez y la guía resalta el siguiente. También se abre desde Ajustes → CÓMO SE JUEGA.
+
 ## Roles, hábitats y legado
 
-- **Roles**: cada ejemplar puede ser recolector, incubador o explorador desde su ficha. Los recolectores producen un 25 % más de ámbar propio; cada incubador adulto reduce la incubación un 2 % (máximo 10 %); cada explorador adulto sube un 1 % el peso de raro o superior (máximo 10 %).
+- **Roles**: cada ejemplar puede ser recolector, incubador o explorador desde su ficha. Los recolectores producen un 25 % más de ámbar propio; cada incubador adulto reduce la incubación un 2 % (máximo 10 %); cada explorador adulto sube un 1 % el peso de raro o superior (máximo 10 %). La ficha sugiere el rol según la estadística funcional más alta y el hábitat que acompaña a ese rol, con un botón **APLICAR** que respeta la capacidad.
 - **Hábitats**: el botón **HÁBITATS** de la pradera abre el panel de los tres biomas. Cada uno admite 3 residentes. Bosque da +15 % de producción a sus residentes; Volcán da +1 % de peso raro+ por residente adulto (máximo 3 %); Costa reduce la incubación un 2 % por residente adulto (máximo 6 %).
 - **Pradera por hábitat**: las pestañas **TODOS / BOSQUE / VOLCÁN / COSTA** cambian el fondo y muestran solo los dinosaurios asignados a ese hábitat, caminando de lado a lado. La pestaña **TODOS** conserva la vista global.
 - **Decoración**: cada hábitat tiene una decoración permanente que se compra con ámbar o esencia. Añade un bonus adicional y cambia el dibujo del bioma.
@@ -92,6 +94,8 @@ El botón **OPCIONES** de Ajustes abre un panel con:
 
 - **Audio**: volumen independiente de música y efectos, además de los silencios rápidos.
 - **Accesibilidad**: modo daltónico con paleta de alto contraste, texto grande y **reducir movimiento** (sin sacudidas, saltos ni nubes en movimiento).
+- **Escala de UI**: 90, 100 o 110 % para textos y controles, independiente de la ventana.
+- **Zona segura**: 0, 2 o 4 % de margen para TVs y pantallas con overscan.
 - **Pantalla**: escala de ventana y pantalla completa.
 - **Mando**: cursor virtual con el stick izquierdo, A para pulsar, B para volver, LB/RB para cambiar de pestaña y Start para guardar.
 - **Datos**: guardar una copia en `save-backup.json`, restaurarla con confirmación y liberar duplicados.

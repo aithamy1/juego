@@ -51,6 +51,8 @@ local function defaultSettings()
     reduceMotion = config.settings.defaultReduceMotion,
     fullscreen = config.settings.defaultFullscreen,
     uiScale = config.settings.defaultUiScale,
+    uiTextScale = config.settings.defaultUiTextScale,
+    safeZone = config.settings.defaultSafeZone,
     calm = false,
     reminder = config.settings.defaultReminder,
     dailyCap = config.settings.defaultDailyCap,
@@ -125,6 +127,7 @@ function state.new(seed, now)
     },
     achievements = { unlocked = {} },
     goals = { active = {}, completed = {} },
+    guide = { seen = {} },
     log = {},
     dinodex = {
       variants = {},
@@ -892,6 +895,20 @@ function state.setSetting(s, key, value)
         return
       end
     end
+  elseif key == "uiTextScale" then
+    for _, option in ipairs(config.settings.uiTextScaleOptions) do
+      if option == value then
+        s.settings.uiTextScale = value
+        return
+      end
+    end
+  elseif key == "safeZone" then
+    for _, option in ipairs(config.settings.safeZoneOptions) do
+      if option == value then
+        s.settings.safeZone = value
+        return
+      end
+    end
   elseif key == "reminder" then
     local valid = false
     for _, option in ipairs(config.settings.reminderOptions) do
@@ -920,6 +937,22 @@ function state.metric(s, key)
     return (s.stats and s.stats.hatched) or 0
   elseif key == "opened" then
     return (s.stats and s.stats.opened) or 0
+  elseif key == "rolesAssigned" then
+    local count = 0
+    for _, dino in ipairs(s.dinos or {}) do
+      if dino.role then
+        count = count + 1
+      end
+    end
+    return count
+  elseif key == "habitatsAssigned" then
+    local count = 0
+    for _, dino in ipairs(s.dinos or {}) do
+      if dino.habitat then
+        count = count + 1
+      end
+    end
+    return count
   elseif key == "crosses" then
     return (s.stats and s.stats.crosses) or 0
   elseif key == "mutations" then
@@ -956,6 +989,86 @@ function state.metric(s, key)
     return count
   end
   return 0
+end
+
+function state.guideList(s)
+  local list = {}
+  for _, id in ipairs(config.onboardingOrder) do
+    local def = config.onboarding[id]
+    local value = state.metric(s, def.metric)
+    list[#list + 1] = {
+      id = id,
+      name = def.name,
+      desc = def.desc,
+      metric = def.metric,
+      target = def.target,
+      scene = def.scene,
+      modal = def.modal,
+      selectAdult = def.selectAdult,
+      value = math.min(value, def.target),
+      raw = value,
+      completed = value >= def.target,
+    }
+  end
+  return list
+end
+
+function state.guideProgress(s)
+  local done = 0
+  local nextStep = nil
+  for _, step in ipairs(state.guideList(s)) do
+    if step.completed then
+      done = done + 1
+    elseif not nextStep then
+      nextStep = step
+    end
+  end
+  return done, #config.onboardingOrder, nextStep
+end
+
+function state.guideEvents(s)
+  s.guide = s.guide or { seen = {} }
+  s.guide.seen = s.guide.seen or {}
+  local events = {}
+  for _, step in ipairs(state.guideList(s)) do
+    if step.completed and not s.guide.seen[step.id] then
+      s.guide.seen[step.id] = true
+      events[#events + 1] = step
+    end
+  end
+  return events
+end
+
+function state.recommendRole(dino)
+  local functional = dino.functional or {}
+  local productivity = functional.productivity or 1
+  local fertility = functional.fertility or 1
+  local luck = functional.luck or 1
+  if luck > productivity and luck > fertility then
+    return "explorador"
+  elseif fertility > productivity and fertility > luck then
+    return "incubador"
+  end
+  return "recolector"
+end
+
+function state.recommendHabitat(s, dino, role)
+  role = role or dino.role or state.recommendRole(dino)
+  local order
+  if role == "incubador" then
+    order = { "costa", "bosque", "volcan" }
+  elseif role == "explorador" then
+    order = { "volcan", "bosque", "costa" }
+  else
+    order = { "bosque", "volcan", "costa" }
+  end
+  for _, key in ipairs(order) do
+    local residents = #state.habitatResidents(s, key)
+    if dino.habitat == key or residents < config.habitats[key].capacity then
+      return key
+    end
+  end
+  return nil
 end
 
 function state.grantReward(s, reward)
@@ -1196,6 +1309,24 @@ function state.normalize(s)
   if not scaleValid then
     s.settings.uiScale = defaults.uiScale
   end
+  local textScaleValid = false
+  for _, option in ipairs(config.settings.uiTextScaleOptions) do
+    if s.settings.uiTextScale == option then
+      textScaleValid = true
+    end
+  end
+  if not textScaleValid then
+    s.settings.uiTextScale = defaults.uiTextScale
+  end
+  local safeZoneValid = false
+  for _, option in ipairs(config.settings.safeZoneOptions) do
+    if s.settings.safeZone == option then
+      safeZoneValid = true
+    end
+  end
+  if not safeZoneValid then
+    s.settings.safeZone = defaults.safeZone
+  end
 
   s.stats = s.stats or {}
   if s.stats.opened == nil then
@@ -1351,6 +1482,14 @@ function state.normalize(s)
   end
   for i = slots + 1, #s.incubators do
     s.incubators[i] = nil
+  end
+
+  s.guide = s.guide or { seen = {} }
+  s.guide.seen = s.guide.seen or {}
+  for _, step in ipairs(state.guideList(s)) do
+    if step.completed then
+      s.guide.seen[step.id] = true
+    end
   end
 
   state.refreshAdults(s, s.lastTick or os.time())

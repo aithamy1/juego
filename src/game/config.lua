@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "2.5.0"
+config.version = "2.6.0"
 config.saveVersion = 1
 
 config.window = {
@@ -502,6 +502,8 @@ config.settings = {
   reminderOptions = { 0, 60, 90 },
   dailyCapOptions = { 0, 25, 50, 100, 200 },
   uiScaleOptions = { 1, 1.25, 1.5 },
+  uiTextScaleOptions = { 0.9, 1.0, 1.1 },
+  safeZoneOptions = { 0, 0.02, 0.04 },
   defaultReminder = 0,
   defaultDailyCap = 0,
   defaultMusic = true,
@@ -513,6 +515,82 @@ config.settings = {
   defaultReduceMotion = false,
   defaultFullscreen = false,
   defaultUiScale = 1,
+  defaultUiTextScale = 1.0,
+  defaultSafeZone = 0,
+}
+
+-- Primeros pasos: onboarding corto y accionable.
+config.onboardingOrder = {
+  "primer_huevo",
+  "cinco_huevos",
+  "primer_rol",
+  "primer_habitat",
+  "primer_cruce",
+  "primera_decoracion",
+  "primer_nodo",
+  "primera_migracion",
+}
+config.onboarding = {
+  primer_huevo = {
+    name = "Abre tu primer huevo",
+    desc = "Incuba el huevo inicial y pulsa ABRIR HUEVOS.",
+    metric = "opened",
+    target = 1,
+    scene = "nest",
+  },
+  cinco_huevos = {
+    name = "Abre 5 huevos",
+    desc = "Consigue tus primeros ejemplares y empieza la colonia.",
+    metric = "opened",
+    target = 5,
+    scene = "nest",
+  },
+  primer_rol = {
+    name = "Asigna un rol",
+    desc = "En la ficha del Criadero elige Recolector, Incubador o Explorador.",
+    metric = "rolesAssigned",
+    target = 1,
+    scene = "breeding",
+    selectAdult = true,
+  },
+  primer_habitat = {
+    name = "Asigna un hábitat",
+    desc = "Cada bioma da un bonus a sus residentes. Hay tres huecos por hábitat.",
+    metric = "habitatsAssigned",
+    target = 1,
+    scene = "breeding",
+    selectAdult = true,
+  },
+  primer_cruce = {
+    name = "Completa un cruce",
+    desc = "Elige dos adultos de la misma especie en la pestaña Cruces.",
+    metric = "crosses",
+    target = 1,
+    scene = "cross",
+  },
+  primera_decoracion = {
+    name = "Decora un hábitat",
+    desc = "Compra una decoración permanente en el panel HÁBITATS.",
+    metric = "decorations",
+    target = 1,
+    scene = "nest",
+    modal = "habitats",
+  },
+  primer_nodo = {
+    name = "Compra un nodo de legado",
+    desc = "Gasta puntos en Ajustes → ÁRBOL DE LEGADO.",
+    metric = "treeNodes",
+    target = 1,
+    scene = "settings",
+    modal = "prestige_tree",
+  },
+  primera_migracion = {
+    name = "Completa una Gran Migración",
+    desc = "Abre 120 huevos desde la última migración y migra.",
+    metric = "prestiges",
+    target = 1,
+    scene = "settings",
+  },
 }
 
 config.achievementOrder = {
