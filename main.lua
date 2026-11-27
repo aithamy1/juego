@@ -200,8 +200,6 @@ function love.load()
   end
   if offlineSummary and (offlineSummary.credited >= 30 or offlineSummary.hatches > 0) then
     uiApp:openModal("offline", { summary = offlineSummary })
-  elseif game.meta.firstRun then
-    uiApp:openModal("guide", {})
   end
 
   local mx, my = toCanvas(love.mouse.getPosition())

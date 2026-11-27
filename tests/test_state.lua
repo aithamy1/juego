@@ -2,6 +2,7 @@ local config = require("src.game.config")
 local state = require("src.game.state")
 local economy = require("src.game.economy")
 local prestige = require("src.game.prestige")
+local tutorial = require("src.ui.tutorial")
 
 local function makeAdult(s, now, species)
   local dino = state.addDino(s, {
@@ -223,6 +224,76 @@ return function(t)
     s.guide.seen = {}
     state.normalize(s)
     t.assertEqual(#state.guideEvents(s), 0)
+  end)
+
+  t.test("el tutorial solo se activa en partidas nuevas y conserva el paso", function()
+    local now = 1800000000
+    local s = state.new(1, now)
+    t.assertTrue(s.tutorial.active)
+    t.assertEqual(s.tutorial.step, 1)
+    s.tutorial.active = false
+    s.tutorial.skipped = true
+    state.normalize(s)
+    t.assertFalse(s.tutorial.active)
+
+    local old = state.new(2, now)
+    old.tutorial = nil
+    state.normalize(old)
+    t.assertFalse(old.tutorial.active)
+    t.assertTrue(old.tutorial.done)
+
+    local resumed = state.new(3, now)
+    resumed.tutorial = { active = true, step = 4, done = false, skipped = false }
+    state.normalize(resumed)
+    t.assertTrue(resumed.tutorial.active)
+    t.assertEqual(resumed.tutorial.step, 4)
+  end)
+
+  t.test("el tutorial avanza con las acciones y se puede terminar", function()
+    local now = 1800000000
+    local s = state.new(1, now)
+    s.tutorial = { active = true, step = 2, done = false, skipped = false }
+    local app = {
+      game = s,
+      scene = "nest",
+      selectedDino = nil,
+      modal = nil,
+      toast = function() end,
+    }
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 2)
+    s.incubators[1] = { egg = { id = 1 }, startedAt = now, finishAt = now + 30 }
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 3)
+    s.pendingReveals[1] = { id = 1 }
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 4)
+    s.stats.opened = 1
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 5)
+    local dino = { id = 1, role = nil, habitat = nil, functional = {} }
+    s.dinos = { dino }
+    app.scene = "breeding"
+    tutorial.update(app)
+    t.assertEqual(app.selectedDino, 1)
+    dino.role = "recolector"
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 6)
+    dino.habitat = "bosque"
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 7)
+    s.upgrades.generator = 1
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 8)
+    tutorial.update(app)
+    t.assertEqual(s.tutorial.step, 8)
+    app.click = { x = 800, y = 674, button = 1 }
+    tutorial.handleInput(app)
+    t.assertEqual(s.tutorial.step, 9)
+    app.click = { x = 800, y = 674, button = 1 }
+    tutorial.handleInput(app)
+    t.assertFalse(s.tutorial.active)
+    t.assertTrue(s.tutorial.done)
   end)
 
   t.test("los ajustes de audio, movimiento, escala y zona segura se guardan al cargar", function()

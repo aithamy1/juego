@@ -54,6 +54,7 @@ Los tests cubren:
 main.lua                 arranque, canvas, escala, guardado y entrada
 conf.lua                 ventana 1280×720, redimensionable y audio activado
 assets/fonts/            Pixelify Sans, Silkscreen y sus licencias OFL
+src/ui/tutorial.lua      tutorial lineal de la primera partida
 lib/json.lua             JSON propio y determinista
 src/audio/audio.lua      música y efectos procedurales (sin archivos externos)
 src/game/                lógica pura, sin love.*
@@ -79,6 +80,10 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 La cabecera de cada escena muestra una **acción recomendada** (abrir huevos, incubar, asignar roles o mejorar). El panel derecho cambia según la escena: mejoras rápidas en Nido y Criadero, resumen en Mejoras, colección en Dinodex, registro en Registro y controles en Ajustes. Los tooltips aparecen tras un breve retardo, las compras muestran **LISTO** o **faltan X**, y el dorado queda para el ámbar, las acciones principales y las rarezas.
 
 El botón **?** de la cabecera abre **Primeros pasos**, una guía de 8 hitos (abrir huevos, asignar rol y hábitat, cruzar, decorar, legado y migrar) que se guarda con la partida. Cada hito completado avisa una sola vez y la guía resalta el siguiente. También se abre desde Ajustes → CÓMO SE JUEGA.
+
+## Tutorial de primera partida
+
+La primera partida muestra un tutorial lineal de **9 pasos** con foco visual sobre el control que toca: incubar el huevo, esperar, abrirlo, asignar rol y hábitat, comprar una mejora, ver Cruces y terminar en la guía. Avanza al hacer la acción y cada paso tiene **SALTAR TUTORIAL** para salir cuando quieras. Queda guardado, no se repite tras migrar y los guardados anteriores no lo activan.
 
 ## Roles, hábitats y legado
 

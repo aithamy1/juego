@@ -6,6 +6,7 @@ local genetics = require("src.game.genetics")
 local prestige = require("src.game.prestige")
 local theme = require("src.ui.theme")
 local widgets = require("src.ui.widgets")
+local tutorial = require("src.ui.tutorial")
 local render = require("src.render.dino")
 
 local app = {}
@@ -249,6 +250,7 @@ function app:update(dt, now)
     local step = guideEvents[#guideEvents]
     self:toast("Guía: " .. step.name .. " completado.", theme.colors.teal)
   end
+  tutorial.update(self)
 
   local crossJob = self.game.cross
   if crossJob then
@@ -1039,6 +1041,9 @@ function app:drawBoard()
 end
 
 function app:drawToasts()
+  if self.game.tutorial and self.game.tutorial.active then
+    return
+  end
   local time = love.timer.getTime()
   local latest = nil
   for _, toast in ipairs(self.toasts) do
@@ -1072,6 +1077,7 @@ function app:draw()
   theme.background()
   self.mouse.hand = false
   self.tooltip = nil
+  tutorial.handleInput(self)
 
   local hasModal = self.modal ~= nil
   self.blocked = hasModal
@@ -1093,6 +1099,7 @@ function app:draw()
 
   self:drawToasts()
   widgets.drawTooltip(self)
+  tutorial.draw(self)
 
   self.click = nil
   self.wheel = nil

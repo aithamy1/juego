@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "2.7.1"
+config.version = "2.8.0"
 config.saveVersion = 1
 
 config.window = {
@@ -510,6 +510,8 @@ config.dinodex = {
   milestoneFractions = { 0.25, 0.50, 0.75, 1.00 },
   milestoneBonus = 0.03,
 }
+
+config.tutorialStepCount = 9
 
 config.settings = {
   reminderOptions = { 0, 60, 90 },

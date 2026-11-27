@@ -128,6 +128,7 @@ function state.new(seed, now)
     achievements = { unlocked = {} },
     goals = { active = {}, completed = {} },
     guide = { seen = {} },
+    tutorial = { active = true, step = 1, done = false, skipped = false },
     log = {},
     dinodex = {
       variants = {},
@@ -1489,6 +1490,25 @@ function state.normalize(s)
   for _, step in ipairs(state.guideList(s)) do
     if step.completed then
       s.guide.seen[step.id] = true
+    end
+  end
+
+  -- Tutorial solo para partidas nuevas. Un guardado antiguo no lo activa.
+  if s.tutorial == nil then
+    s.tutorial = {
+      active = false,
+      step = config.tutorialStepCount + 1,
+      done = true,
+      skipped = false,
+    }
+  else
+    s.tutorial.active = not not s.tutorial.active
+    s.tutorial.done = not not s.tutorial.done
+    s.tutorial.skipped = not not s.tutorial.skipped
+    s.tutorial.step = math.max(1, math.min(config.tutorialStepCount + 1,
+      math.floor(tonumber(s.tutorial.step) or 1)))
+    if s.tutorial.done or s.tutorial.skipped then
+      s.tutorial.active = false
     end
   end
 
