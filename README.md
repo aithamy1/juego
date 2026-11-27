@@ -6,7 +6,7 @@ MVP de un juego incremental de cría y coleccionismo de dinosaurios hecho con **
 
 - [LÖVE 11.5](https://love2d.org/) para jugar.
 - `luajit` para ejecutar los tests fuera del motor.
-- Todo el arte del juego se dibuja con `love.graphics`. La interfaz usa **Pixelify Sans** (SIL OFL), incluida en `assets/fonts`.
+- Todo el arte del juego se dibuja con `love.graphics`. La interfaz usa **Pixelify Sans** para las letras y dígitos de **Silkscreen** para los números (ambas SIL OFL), incluidas en `assets/fonts`.
 
 ## Ejecutar
 
@@ -53,7 +53,7 @@ Los tests cubren:
 ```
 main.lua                 arranque, canvas, escala, guardado y entrada
 conf.lua                 ventana 1280×720, redimensionable y audio activado
-assets/fonts/            Pixelify Sans y su licencia OFL
+assets/fonts/            Pixelify Sans, Silkscreen y sus licencias OFL
 lib/json.lua             JSON propio y determinista
 src/audio/audio.lua      música y efectos procedurales (sin archivos externos)
 src/game/                lógica pura, sin love.*
@@ -197,7 +197,7 @@ La especificación no fijaba estos detalles; se resolvieron así:
 16. **Audio**: música y efectos se sintetizan al arrancar y no usan archivos externos. El audio se puede silenciar; si el dispositivo falla, el juego continúa en silencio.
 17. **Pity**: la garantía sustituye la tirada en el huevo número `rareAt`, `legendaryAt` o `mutationAt` desde el último resultado correspondiente. Los contadores se reinician solo al obtener ese resultado.
 18. **Rendimiento**: la rejilla del criadero solo dibuja las tarjetas visibles. Se probó la carga y el desplazamiento con 200 ejemplares; la tasa de 60 FPS depende de la GPU (el entorno de desarrollo usa render por software y no permite validarla).
-19. **Fuente**: Pixelify Sans se incluye bajo SIL OFL para acercar la interfaz a la referencia pixel-art; no se usan imágenes externas.
+19. **Fuente**: Pixelify Sans se usa para las letras y Silkscreen para los dígitos, ambas bajo SIL OFL. Los números se distinguen mejor a tamaño pequeño; no se usan imágenes externas.
 20. **Roles y hábitats**: asignar rol o hábitat es gratuito y se puede cambiar cuando quieras. Los efectos de incubador y explorador solo cuentan ejemplares adultos; el recolector mejora la producción propia. La capacidad de cada hábitat es 3 y no se amplía.
 21. **Decoración**: cada hábitat tiene una decoración permanente, se compra una vez y no se puede cambiar. Se conserva al migrar.
 22. **Árbol de legado**: los puntos disponibles son independientes del legado total y del multiplicador. Al migrar se suman a ambos; gastarlos no reduce el multiplicador permanente.

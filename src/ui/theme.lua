@@ -67,12 +67,13 @@ end
 function theme.load()
   for _, size in ipairs(sizes) do
     local fallback = love.graphics.newFont(size)
-    local regular = love.graphics.newFont("assets/fonts/PixelifySans-Regular.ttf", size)
+    -- Letras de Pixelify Sans; dígitos de Silkscreen, más legibles (6/8/9).
+    local regular = love.graphics.newFont("assets/fonts/CriaderoNumeros-Regular.ttf", size)
     regular:setFilter("nearest", "nearest")
     regular:setFallbacks(fallback)
     theme.fonts[size] = regular
 
-    local bold = love.graphics.newFont("assets/fonts/PixelifySans-Bold.ttf", size)
+    local bold = love.graphics.newFont("assets/fonts/CriaderoNumeros-Bold.ttf", size)
     bold:setFilter("nearest", "nearest")
     bold:setFallbacks(fallback)
     theme.boldFonts = theme.boldFonts or {}
