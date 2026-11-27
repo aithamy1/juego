@@ -181,7 +181,7 @@ La especificación no fijaba estos detalles; se resolvieron así:
 10. **Cruces**: no se pueden cancelar. Los padres quedan ocupados hasta terminar. Si el nido está lleno, el huevo de cruce espera y tiene prioridad sobre el siguiente huevo del nido.
 11. **Registro**: conserva las últimas 2.000 aperturas; las estadísticas comparativas son de toda la partida. Se guardan semilla y contador para auditar.
 12. **Mutaciones**: las cinco son equiprobables; la probabilidad total es `mutationChance` y cada una recibe una quinta parte.
-13. **Especie**: la tirada de especie es uniforme entre las seis. Los cruces solo son entre la misma especie.
+13. **Especie**: la tirada de especie es uniforme entre las siete. Los cruces solo son entre la misma especie.
 14. **Colores**: paleta fija de cuatro primarios y cuatro secundarios; la herencia usa dominancia simple.
 15. **Guardado**: JSON propio, clave `version` y migraciones. La lectura/escritura la hace `main.lua`; `src/game/save.lua` no toca `love.filesystem`.
 16. **Audio**: música y efectos se sintetizan al arrancar y no usan archivos externos. El audio se puede silenciar; si el dispositivo falla, el juego continúa en silencio.

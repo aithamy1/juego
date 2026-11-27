@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "2.3.0"
+config.version = "2.4.0"
 config.saveVersion = 1
 
 config.window = {
@@ -110,6 +110,7 @@ config.rarity = {
 }
 
 config.speciesOrder = {
+  "trex",
   "triceratops",
   "velociraptor",
   "parasaurolophus",
@@ -119,6 +120,14 @@ config.speciesOrder = {
 }
 
 config.species = {
+  trex = {
+    name = "Tyrannosaurus rex",
+    short = "T-Rex",
+    desc = "Mandíbulas enormes y brazos diminutos. +25 % de ámbar, pero pone huevos despacio.",
+    bodyScale = 1.12,
+    layTime = 780,
+    production = 1.25,
+  },
   triceratops = {
     name = "Triceratops",
     short = "Triceratops",
@@ -176,7 +185,7 @@ config.colorOrder = { "verde", "ocre", "azul", "rojo" }
 config.colors = {
   verde = { name = "Verde", dominance = 1, rgb = { 0.36, 0.63, 0.36 } },
   ocre = { name = "Ocre", dominance = 2, rgb = { 0.78, 0.58, 0.26 } },
-  azul = { name = "Azul", dominance = 3, rgb = { 0.31, 0.52, 0.73 } },
+  azul = { name = "Azul", dominance = 3, rgb = { 0.10, 0.55, 0.95 } },
   rojo = { name = "Rojo", dominance = 4, rgb = { 0.74, 0.33, 0.28 } },
 }
 

@@ -101,14 +101,19 @@ function dinodex.draw(app)
 
   local stats = speciesStats(game)
   local cardW = 354
-  local cardH = 136
+  local cardH = 106
   local gapX = 20
-  local gapY = 12
-  local startY = 238
+  local gapY = 6
+  local startY = 234
+  local totalSpecies = #config.speciesOrder
   for index, species in ipairs(config.speciesOrder) do
     local col = (index - 1) % 2
     local row = math.floor((index - 1) / 2)
     local cx = x + col * (cardW + gapX)
+    -- Con un número impar de especies, la última tarjeta queda centrada.
+    if index == totalSpecies and totalSpecies % 2 == 1 then
+      cx = x + (cardW + gapX) / 2
+    end
     local cy = startY + row * (cardH + gapY)
     local entry = stats[species]
     local percent = entry.total / totalPerSpecies
@@ -124,19 +129,19 @@ function dinodex.draw(app)
       shadowSize = 3,
       borderWidth = 2,
     })
-    render.drawDino(sample, cx + 58, cy + 82, 0.42, { silhouette = silhouette, alpha = silhouette and 0.7 or 1 })
-    theme.setFont(11)
+    render.drawDino(sample, cx + 58, cy + 80, 0.42, { silhouette = silhouette, alpha = silhouette and 0.7 or 1 })
+    theme.setFont(10)
     theme.setColor(theme.colors.text, 1)
-    love.graphics.print(config.species[species].name, cx + 112, cy + 10)
+    love.graphics.printf(config.species[species].name, cx + 112, cy + 8, 142, "left")
     theme.setFont(8)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print(entry.total .. " / " .. totalPerSpecies .. " variantes", cx + 112, cy + 29)
-    widgets.progressBar(cx + 112, cy + 45, 220, 7, percent, theme.colors.purple, {})
+    love.graphics.print(entry.total .. " / " .. totalPerSpecies .. " variantes", cx + 112, cy + 26)
+    widgets.progressBar(cx + 112, cy + 41, 220, 7, percent, theme.colors.purple, {})
     theme.setFont(8)
     theme.setColor(theme.colors.textDim, 1)
-    love.graphics.print(theme.fmtPct(percent, 1), cx + 112, cy + 57)
+    love.graphics.print(theme.fmtPct(percent, 1), cx + 112, cy + 52)
     theme.setColor(theme.colors.muted, 1)
-    love.graphics.print(entry.mutations .. " con mutación", cx + 180, cy + 57)
+    love.graphics.print(entry.mutations .. " con mutación", cx + 180, cy + 52)
 
     local mutationNames = {}
     for _, mutation in ipairs(config.mutationOrder) do
@@ -150,9 +155,9 @@ function dinodex.draw(app)
     theme.setFont(8)
     theme.setColor(theme.colors.purple, #mutationNames > 0 and 1 or 0.4)
     love.graphics.printf(#mutationNames > 0 and table.concat(mutationNames, " · ") or "Aún sin mutaciones",
-      cx + 112, cy + 74, 228, "left")
+      cx + 112, cy + 65, 228, "left")
 
-    widgets.button(app, cx + cardW - 92, cy + 98, 80, 26, "VER", {
+    widgets.button(app, cx + cardW - 92, cy + 8, 80, 24, "VER", {
       style = "ghost",
       font = 8,
       onClick = function()

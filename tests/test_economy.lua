@@ -169,4 +169,19 @@ return function(t)
     t.assertEqual(economy.totalProduction(s, now), 0)
     t.assertTrue(economy.totalProduction(s, now + 1000) > 0)
   end)
+
+  t.test("el T-Rex produce más ámbar y pone más despacio", function()
+    local now = 1800000000
+    local s = state.new(1, now)
+    local rex = adultDino(now)
+    rex.id = 1
+    rex.species = "trex"
+    local tri = adultDino(now)
+    tri.id = 1
+    tri.species = "triceratops"
+    local ratio = economy.dinoRate(rex, s) / economy.dinoRate(tri, s)
+    t.assertNear(ratio, config.species.trex.production, 1e-9, "bonus de ámbar del T-Rex")
+    t.assertTrue(economy.layInterval(rex, s, 1, now) > economy.layInterval(tri, s, 1, now),
+      "el T-Rex debe tardar más en poner")
+  end)
 end

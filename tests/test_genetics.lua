@@ -134,8 +134,8 @@ return function(t)
     end
   end)
 
-  t.test("el Dinodex tiene 288 variantes por especie y 1728 en total", function()
+  t.test("el Dinodex tiene 288 variantes por especie y 2016 en total", function()
     t.assertEqual(genetics.dexTotalPerSpecies(), 288)
-    t.assertEqual(genetics.dexTotal(), 1728)
+    t.assertEqual(genetics.dexTotal(), 2016)
   end)
 end

@@ -131,6 +131,7 @@ function economy.isAdult(dino, now)
 end
 
 function economy.dinoRate(dino, state)
+  local species = config.species[dino.species] or config.species.triceratops
   local rarity = config.rarity[dino.rarity] or config.rarity.common
   local productivity = (dino.functional and dino.functional.productivity) or 1
   local mutationMult = 1
@@ -138,6 +139,7 @@ function economy.dinoRate(dino, state)
     mutationMult = config.mutations[dino.mutation].production
   end
   local rate = rarity.amberPerSec
+    * (species.production or 1)
     * (1 + 0.12 * productivity)
     * mutationMult
   if dino.role == "recolector" then

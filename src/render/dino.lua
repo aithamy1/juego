@@ -65,6 +65,7 @@ local function palette(dino)
 end
 
 local crestSpots = {
+  trex = { 80, 5 },
   triceratops = { 86, 32 },
   velociraptor = { 87, 27 },
   parasaurolophus = { 86, 26 },

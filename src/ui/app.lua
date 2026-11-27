@@ -2,6 +2,7 @@
 local config = require("src.game.config")
 local stateModule = require("src.game.state")
 local economy = require("src.game.economy")
+local genetics = require("src.game.genetics")
 local prestige = require("src.game.prestige")
 local theme = require("src.ui.theme")
 local widgets = require("src.ui.widgets")
@@ -452,7 +453,7 @@ function app:navInfo(key)
       icon = "upgrade",
     }
   elseif key == "dinodex" then
-    local total = 1728
+    local total = genetics.dexTotal()
     return {
       title = "Dinodex",
       sub = game.dinodex.total .. " / " .. total .. " · " .. theme.fmtPct(game.dinodex.total / total, 1),
