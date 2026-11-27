@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "2.4.1"
+config.version = "2.5.0"
 config.saveVersion = 1
 
 config.window = {
@@ -510,6 +510,7 @@ config.settings = {
   defaultSfxVolume = 100,
   defaultColorblind = false,
   defaultLargeText = false,
+  defaultReduceMotion = false,
   defaultFullscreen = false,
   defaultUiScale = 1,
 }

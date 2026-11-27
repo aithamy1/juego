@@ -286,7 +286,7 @@ function app:drawHeader()
       love.graphics.rectangle("fill", x, 0, 8, 64)
     end
   end
-  theme.setColor(theme.colors.goldDark, 1)
+  theme.setColor(theme.colors.sectionDark, 1)
   love.graphics.rectangle("fill", 0, 60, 1280, 4)
 
   local production = economy.totalProduction(game, self.now or os.time())
@@ -376,6 +376,129 @@ function app:drawHeader()
     borderWidth = 2,
   })
   theme.drawGear(gearX + 22, gearY + 22, 12, theme.colors.textDim)
+end
+
+-- Acción recomendada: una sola cosa que hacer ahora mismo.
+function app:recommendedAction()
+  local game = self.game
+  local now = self.now or os.time()
+  local pending = #(game.pendingReveals or {})
+  if pending > 0 then
+    return {
+      label = "ABRIR HUEVOS (" .. pending .. ")",
+      action = "open",
+      color = theme.colors.gold,
+      tooltip = "Hay " .. pending .. " huevo" .. (pending > 1 and "s" or "") .. " listo" .. (pending > 1 and "s" or "") .. " para abrir.",
+    }
+  end
+  if game.cross and game.cross.finished then
+    return {
+      label = "RECOGER CRUCE",
+      action = "nest",
+      color = theme.colors.essence,
+      tooltip = "El cruce terminó. Recoge el huevo en el Nido.",
+    }
+  end
+  local freeSlots = 0
+  for index = 1, economy.incubatorSlots(game) do
+    if not game.incubators[index] then
+      freeSlots = freeSlots + 1
+    end
+  end
+  if #game.eggs > 0 and freeSlots > 0 then
+    local count = math.min(#game.eggs, freeSlots)
+    return {
+      label = "INCUBAR " .. count .. " HUEVO" .. (count > 1 and "S" or ""),
+      action = "incubate",
+      color = theme.colors.amber,
+      tooltip = "Hay " .. #game.eggs .. " en el nido y " .. freeSlots .. " incubadora" .. (freeSlots > 1 and "s" or "") .. " libre" .. (freeSlots > 1 and "s" or "") .. ".",
+    }
+  end
+  local unassigned = 0
+  local firstUnassigned = nil
+  for _, dino in ipairs(game.dinos or {}) do
+    if not stateModule.isDinoPending(game, dino.id)
+      and not stateModule.isCrossing(game, dino.id)
+      and (not dino.role or not dino.habitat) then
+      unassigned = unassigned + 1
+      firstUnassigned = firstUnassigned or dino.id
+    end
+  end
+  if unassigned > 0 then
+    return {
+      label = "ASIGNAR ROLES",
+      action = "breeding",
+      target = firstUnassigned,
+      color = theme.colors.teal,
+      tooltip = unassigned .. " ejemplar" .. (unassigned > 1 and "es" or "") .. " sin rol o hábitat. Asignarlos mejora la colonia.",
+    }
+  end
+  for _, key in ipairs(config.upgradesOrder) do
+    local def = config.upgrades[key]
+    local level = game.upgrades[key] or 0
+    local cost = economy.upgradeCost(key, level)
+    if cost and (game[def.currency] or 0) >= cost then
+      return {
+        label = "MEJORAR COLONIA",
+        action = "upgrades",
+        color = theme.colors.green,
+        tooltip = "Puedes comprar " .. def.name .. " por " .. theme.fmtInt(cost) .. (def.currency == "amber" and " ámbar." or " esencia."),
+      }
+    end
+  end
+  return {
+    label = "TODO AL DÍA",
+    action = nil,
+    color = theme.colors.green,
+    tooltip = "No hay acciones urgentes. Sigue criando y abriendo huevos.",
+  }
+end
+
+function app:drawRecommendedAction(x, y, w, h)
+  local action = self:recommendedAction()
+  local hover = action.action and widgets.hover(self, x, y, w, h)
+  if hover then
+    self.tooltip = action.tooltip
+    self.mouse.hand = true
+  end
+  if hover and widgets.click(self, x, y, w, h) then
+    if action.action == "open" then
+      self:openNextReveal()
+    elseif action.action == "incubate" then
+      local started = stateModule.incubateAll(self.game, self.now or os.time())
+      if started > 0 then
+        self:toast("Incubando " .. started .. " huevo" .. (started > 1 and "s" or "") .. ".", theme.colors.amber)
+      end
+    elseif action.action then
+      if action.target then
+        self.selectedDino = action.target
+      end
+      self:goto(action.action)
+    end
+  end
+  local fill = hover and theme.colors.panel3 or theme.colors.panel2
+  theme.panel(x, y, w, h, {
+    color = fill,
+    borderColor = action.color,
+    shadowSize = 2,
+    borderWidth = 2,
+  })
+  theme.setColor(action.color, 0.95)
+  love.graphics.rectangle("fill", x + 2, y + 2, 3, h - 4)
+  theme.setFont(7)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("SIGUIENTE", x + 12, y + 3)
+  theme.setFont(9, true)
+  theme.setColor(action.action and theme.colors.text or theme.colors.textDim, 1)
+  love.graphics.print(action.label, x + 12, y + 14)
+  if action.action then
+    theme.setFont(12, true)
+    theme.setColor(action.color, 1)
+    love.graphics.printf(">", x, y + 8, w - 10, "right")
+  else
+    theme.setColor(theme.colors.green, 1)
+    love.graphics.rectangle("fill", x + w - 16, y + 12, 6, 6)
+  end
 end
 
 -- Navegación izquierda
@@ -470,9 +593,15 @@ function app:navInfo(key)
       icon = "log",
     }
   end
+  local motionLabel = "Animaciones"
+  if game.settings.calm then
+    motionLabel = "Modo tranquilo"
+  elseif game.settings.reduceMotion then
+    motionLabel = "Mov. reducido"
+  end
   return {
     title = "Ajustes",
-    sub = (game.settings.calm and "Modo tranquilo" or "Animaciones") .. " · Tope "
+    sub = motionLabel .. " · Tope "
       .. (game.settings.dailyCap == 0 and "sin límite" or tostring(game.settings.dailyCap)),
     bar = 0,
     barColor = theme.colors.muted,
@@ -482,7 +611,7 @@ end
 
 function app:drawLeftSidebar()
   local x = self.layout.leftX
-  theme.goldBar(x, self.layout.leftY, self.layout.leftW, 30, "CATÁLOGO", { font = 14, icon = "dex" })
+  theme.sectionBar(x, self.layout.leftY, self.layout.leftW, 30, "CATÁLOGO", { font = 14, icon = "dex" })
   local y = self.layout.leftY + 38
   for index, tab in ipairs(tabs) do
     local info = self:navInfo(tab.key)
@@ -496,17 +625,17 @@ function app:drawLeftSidebar()
     end
     theme.panel(x, y, self.layout.leftW, 64, {
       color = active and theme.colors.panel3 or (hover and theme.colors.panel2 or theme.colors.panel),
-      borderColor = active and theme.colors.gold or theme.colors.borderSoft,
+      borderColor = active and theme.colors.border or theme.colors.borderSoft,
       shadowSize = 3,
       borderWidth = active and 3 or 1,
     })
     theme.insetPanel(x + 7, y + 9, 34, 34, {
-      color = active and theme.colors.goldDark or theme.colors.bg,
-      borderColor = active and theme.colors.gold or theme.colors.borderSoft,
+      color = active and theme.colors.panel2 or theme.colors.bg,
+      borderColor = active and theme.colors.border or theme.colors.borderSoft,
     })
-    theme.drawNavIcon(info.icon, x + 24, y + 26, 12, active and theme.colors.goldLight or theme.colors.textDim)
+    theme.drawNavIcon(info.icon, x + 24, y + 26, 12, active and theme.colors.text or theme.colors.textDim)
     theme.setFont(12)
-    theme.setColor(active and theme.colors.goldLight or theme.colors.text, 1)
+    theme.setColor(active and theme.colors.text or theme.colors.text, 1)
     love.graphics.print(info.title, x + 49, y + 8)
     theme.setFont(9)
     theme.setColor(active and theme.colors.textDim or theme.colors.muted, 1)
@@ -514,13 +643,13 @@ function app:drawLeftSidebar()
     widgets.progressBar(x + 49, y + 45, 158, 5, info.bar or 0, info.barColor, {})
     local keyX, keyY = x + self.layout.leftW - 25, y + 8
     theme.panel(keyX, keyY, 17, 17, {
-      color = active and theme.colors.goldDark or theme.colors.bg,
-      borderColor = active and theme.colors.gold or theme.colors.borderSoft,
+      color = active and theme.colors.panel2 or theme.colors.bg,
+      borderColor = active and theme.colors.border or theme.colors.borderSoft,
       shadow = false,
       borderWidth = 1,
     })
     theme.setFont(9, true)
-    theme.setColor(active and theme.colors.goldLight or theme.colors.textDim, 1)
+    theme.setColor(active and theme.colors.text or theme.colors.textDim, 1)
     love.graphics.printf(tab.hotkey, keyX, keyY + 4, 17, "center")
     y = y + 68
   end
@@ -528,7 +657,7 @@ function app:drawLeftSidebar()
   local bottomY = 604
   theme.panel(x, bottomY, self.layout.leftW, 92, {
     color = theme.colors.panel,
-    borderColor = theme.colors.goldDark,
+    borderColor = theme.colors.purple,
     shadowSize = 3,
     borderWidth = 2,
   })
@@ -545,14 +674,164 @@ function app:drawLeftSidebar()
   love.graphics.print(theme.fmtInt(self.game.rng.count) .. " tiradas · v" .. config.version, x + 12, bottomY + 68)
 end
 
+function app:drawRightContext(x, y, w, h)
+  local game = self.game
+  local now = self.now or os.time()
+  theme.panel(x, y, w, h, {
+    color = theme.colors.panel,
+    borderColor = theme.colors.borderSoft,
+    shadowSize = 3,
+    borderWidth = 2,
+  })
+  local title, subtitle = "RESUMEN", "El estado de la colonia."
+  if self.scene == "cross" then
+    title, subtitle = "CRUCE ACTUAL", "Padres, tiempo y fertilidad."
+  elseif self.scene == "upgrades" then
+    title, subtitle = "RESUMEN", "Lo que produce la colonia ahora."
+  elseif self.scene == "dinodex" then
+    title, subtitle = "COLECCIÓN", "Tu progreso permanente."
+  elseif self.scene == "log" then
+    title, subtitle = "REGISTRO", "Últimas aperturas y rarezas."
+  elseif self.scene == "settings" then
+    title, subtitle = "CONTROLES", "Atajos y ayuda rápida."
+  end
+  theme.setFont(11, true)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(title, x + 10, y + 8)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf(subtitle, x + 10, y + 24, w - 20, "left")
+
+  local rowY = y + 48
+  local function row(label, value, color)
+    theme.setFont(9)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print(label, x + 10, rowY)
+    theme.setFont(11)
+    theme.setColor(color or theme.colors.text, 1)
+    love.graphics.printf(value, x + 10, rowY - 1, w - 20, "right")
+    rowY = rowY + 28
+  end
+
+  if self.scene == "cross" then
+    if game.cross then
+      local a = stateModule.findDino(game, game.cross.aId)
+      local b = stateModule.findDino(game, game.cross.bId)
+      local remaining = math.max(0, game.cross.finishAt - now)
+      row("Estado", game.cross.finished and "Listo" or "En curso", game.cross.finished and theme.colors.green or theme.colors.essence)
+      row("Ejemplar A", a and config.species[a.species].short or "—")
+      row("Ejemplar B", b and config.species[b.species].short or "—")
+      row("Tiempo", game.cross.finished and "Recoger" or theme.fmtTime(remaining), theme.colors.amber)
+      local progress = math.min(1, (now - game.cross.startedAt) / math.max(1, game.cross.finishAt - game.cross.startedAt))
+      widgets.progressBar(x + 10, rowY + 2, w - 20, 6, progress, theme.colors.essence, {})
+      theme.setFont(8)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.printf(game.cross.finished
+        and "El cruce terminó. Recoge el huevo en el Nido."
+        or "Puedes seguir criando mientras termina el cruce.", x + 10, y + h - 46, w - 20, "left")
+    else
+      row("Estado", "Sin cruce", theme.colors.muted)
+      row("Consejo", "Misma especie", theme.colors.textDim)
+      row("Requisito", "Adultos", theme.colors.textDim)
+      theme.setFont(8)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.printf("Elige A y B en la lista de adultos de abajo.", x + 10, y + h - 46, w - 20, "left")
+    end
+  elseif self.scene == "upgrades" then
+    local adults = 0
+    for _, dino in ipairs(game.dinos) do
+      if now >= (dino.adultAt or 0) then
+        adults = adults + 1
+      end
+    end
+    local free = 0
+    for index = 1, economy.incubatorSlots(game) do
+      if not game.incubators[index] then
+        free = free + 1
+      end
+    end
+    local remaining = economy.nextEggInfo(game, now)
+    local nestFull = #game.eggs >= economy.nestCapacity(game)
+    row("Producción", "+" .. theme.fmtRate(economy.totalProduction(game, now)) .. "/s", theme.colors.amber)
+    row("Adultos", adults .. " / " .. #game.dinos)
+    row("Huevos", #game.eggs .. " / " .. economy.nestCapacity(game))
+    row("Incubadoras", free .. " libres", free > 0 and theme.colors.green or theme.colors.muted)
+    row("Próximo huevo", nestFull and "Nido lleno" or (remaining and theme.fmtTime(math.max(0, remaining)) or "—"),
+      nestFull and theme.colors.amber or theme.colors.gold)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf("Compra mejoras en el panel central. El legado y el Dinodex se conservan.", x + 10, y + h - 46, w - 20, "left")
+  elseif self.scene == "dinodex" then
+    local discovered = 0
+    for _, key in ipairs(config.speciesOrder) do
+      if (game.dinodex.bySpecies[key] or 0) > 0 then
+        discovered = discovered + 1
+      end
+    end
+    local total = genetics.dexTotal()
+    row("Completitud", theme.fmtPct(game.dinodex.total / total, 1), theme.colors.purple)
+    row("Variantes", game.dinodex.total .. " / " .. total)
+    row("Especies", discovered .. " / " .. #config.speciesOrder, theme.colors.teal)
+    row("Mutaciones", tostring(game.stats.mutations or 0), theme.colors.purple)
+    row("Hitos", (game.dinodex.milestoneCount or 0) .. " / 4", theme.colors.green)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf("Cada variante nueva suma al bonus permanente de producción.", x + 10, y + h - 46, w - 20, "left")
+  elseif self.scene == "log" then
+    local rarePlus = (game.stats.byRarity.rare or 0) + (game.stats.byRarity.epic or 0) + (game.stats.byRarity.legendary or 0)
+    row("Abiertos", tostring(game.stats.opened or 0))
+    row("Raros+", tostring(rarePlus), theme.colors.blue)
+    row("Legendarios", tostring(game.stats.byRarity.legendary or 0), theme.colors.gold)
+    row("Mutaciones", tostring(game.stats.mutations or 0), theme.colors.purple)
+    row("Entradas", #game.log .. " / " .. config.stats.maxLog)
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf("Se conservan las últimas 2.000 aperturas; las estadísticas son de toda la partida.", x + 10, y + h - 46, w - 20, "left")
+  else
+    row("Pestañas", "1 – 7")
+    row("Guardar", "F5")
+    row("Volver", "Esc")
+    row("Saltar apertura", "Espacio")
+    row("Mando", "Stick + A", theme.colors.teal)
+    widgets.button(self, x + 10, y + h - 44, w - 20, 30, "CÓMO SE JUEGA", {
+      style = "secondary",
+      font = 9,
+      onClick = function()
+        self:openModal("help", {})
+      end,
+    })
+  end
+end
+
 -- Mejoras rápidas y prestigio a la derecha
 function app:drawRightSidebar()
   local game = self.game
   local x = self.layout.rightX
-  theme.tealBar(x, self.layout.rightY, self.layout.rightW, 30, "MEJORAS", { font = 14, icon = "upgrade" })
+  local contextual = self.scene ~= "nest" and self.scene ~= "breeding"
+  local rightTitles = {
+    cross = "CRUCE",
+    upgrades = "RESUMEN",
+    dinodex = "COLECCIÓN",
+    log = "REGISTRO",
+    settings = "AYUDA",
+  }
+  local rightIcons = {
+    cross = "cross",
+    upgrades = "upgrade",
+    dinodex = "dex",
+    log = "log",
+    settings = "settings",
+  }
+  theme.tealBar(x, self.layout.rightY, self.layout.rightW, 30,
+    contextual and (rightTitles[self.scene] or "RESUMEN") or "MEJORAS",
+    { font = 14, icon = contextual and (rightIcons[self.scene] or "upgrade") or "upgrade" })
 
   local y = self.layout.rightY + 38
-  for _, key in ipairs(quickUpgrades) do
+  if contextual then
+    self:drawRightContext(x, y, self.layout.rightW, 314)
+    y = y + 322
+  end
+  for _, key in ipairs(contextual and {} or quickUpgrades) do
     local def = config.upgrades[key]
     local level = game.upgrades[key] or 0
     local maxed = level >= def.max
@@ -561,7 +840,14 @@ function app:drawRightSidebar()
     local hover = widgets.hover(self, x, y, self.layout.rightW, 74)
     if hover then
       self.mouse.hand = true
-      self.tooltip = def.desc .. (maxed and " Nivel máximo." or (" Coste: " .. theme.fmtInt(cost) .. (def.currency == "amber" and " ámbar." or " esencia.")))
+      if maxed then
+        self.tooltip = def.desc .. " Nivel máximo."
+      else
+        local missing = math.max(0, cost - (game[def.currency] or 0))
+        self.tooltip = def.desc .. " Coste: " .. theme.fmtInt(cost)
+          .. (def.currency == "amber" and " ámbar." or " esencia.")
+          .. (canBuy and "" or (" Faltan " .. theme.fmtInt(missing) .. "."))
+      end
     end
     if widgets.click(self, x, y, self.layout.rightW, 74) and not maxed then
       local ok, value = stateModule.buyUpgrade(game, key)
@@ -577,6 +863,10 @@ function app:drawRightSidebar()
       shadowSize = 3,
       borderWidth = 2,
     })
+    if canBuy and not maxed then
+      theme.setColor(theme.colors.green, 0.95)
+      love.graphics.rectangle("fill", x, y, 3, 74)
+    end
     theme.insetPanel(x + 7, y + 8, 26, 26, {
       color = theme.colors.bg,
       borderColor = theme.colors.borderSoft,
@@ -598,21 +888,29 @@ function app:drawRightSidebar()
       theme.setColor(canBuy and theme.colors.goldLight or theme.colors.muted, 1)
       love.graphics.print(theme.fmtInt(cost), x + 55, y + 37)
       theme.setFont(9)
-      theme.setColor(theme.colors.muted, 1)
-      love.graphics.print(def.currency == "amber" and "ámbar" or "esencia", x + 55, y + 51)
+      if canBuy then
+        theme.setColor(theme.colors.green, 1)
+        love.graphics.print("LISTO", x + 55, y + 51)
+      else
+        local missing = math.max(0, cost - (game[def.currency] or 0))
+        theme.setColor(theme.colors.muted, 1)
+        love.graphics.print("faltan " .. theme.fmtInt(missing), x + 55, y + 51)
+      end
     end
     widgets.progressBar(x + 8, y + 64, self.layout.rightW - 16, 4, level / def.max,
-      maxed and theme.colors.green or theme.colors.gold, {})
+      maxed and theme.colors.green or (canBuy and theme.colors.teal or theme.colors.border), {})
     y = y + 80
   end
 
-  widgets.button(self, x, y, self.layout.rightW, 30, "VER TODAS", {
-    style = "ghost",
-    font = 10,
-    onClick = function()
-      self:goto("upgrades")
-    end,
-  })
+  if not contextual then
+    widgets.button(self, x, y, self.layout.rightW, 30, "VER TODAS", {
+      style = "ghost",
+      font = 10,
+      onClick = function()
+        self:goto("upgrades")
+      end,
+    })
+  end
 
   local prestigeY = y + 38
   local can, reason = prestige.canPrestige(game)
@@ -642,7 +940,7 @@ function app:drawRightSidebar()
   theme.setColor(can and theme.colors.text or theme.colors.muted, 1)
   love.graphics.print("PRESTIGIO", x + 36, prestigeY + 9)
   theme.setFont(8)
-  theme.setColor(can and theme.colors.goldLight or theme.colors.muted, 1)
+  theme.setColor(can and theme.colors.green or theme.colors.muted, 1)
   love.graphics.print(can and ("+" .. gain .. " legado · disponible") or "aún bloqueado", x + 37, prestigeY + 28)
 
   local statsY = prestigeY + 64
@@ -693,10 +991,11 @@ function app:drawBoard()
   theme.woodBoard(layout.boardX, layout.boardY, layout.boardW, layout.boardH)
   theme.phone(886, 80, 1.12)
   local meta = sceneMeta[self.scene] or sceneMeta.nest
-  theme.goldBar(276, 90, 596, 44, meta.title, {
+  theme.sectionBar(276, 90, 596, 44, meta.title, {
     font = 18,
     icon = meta.icon,
   })
+  self:drawRecommendedAction(676, 97, 186, 30)
   theme.setFont(10)
   theme.setColor(theme.colors.textDim, 1)
   love.graphics.printf(meta.subtitle, 276, 138, 596, "left")

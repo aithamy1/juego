@@ -185,19 +185,24 @@ return function(t)
     t.assertNear(economy.productionMultiplier(s), 1 + config.dinodex.milestoneBonus, 1e-9)
   end)
 
-  t.test("los ajustes de música y efectos se guardan y se rellenan al cargar", function()
+  t.test("los ajustes de música, efectos y movimiento se guardan al cargar", function()
     local now = 1800000000
     local s = state.new(987, now)
     t.assertTrue(s.settings.music)
     t.assertTrue(s.settings.sfx)
+    t.assertFalse(s.settings.reduceMotion)
     state.setSetting(s, "music", false)
     state.setSetting(s, "sfx", false)
+    state.setSetting(s, "reduceMotion", true)
     t.assertFalse(s.settings.music)
     t.assertFalse(s.settings.sfx)
+    t.assertTrue(s.settings.reduceMotion)
     s.settings.music = nil
     s.settings.sfx = nil
+    s.settings.reduceMotion = nil
     state.normalize(s)
     t.assertTrue(s.settings.music)
     t.assertTrue(s.settings.sfx)
+    t.assertFalse(s.settings.reduceMotion)
   end)
 end

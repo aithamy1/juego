@@ -295,8 +295,10 @@ function widgets.scroll(app, id, x, y, w, h, contentHeight, drawFn)
   if maxOffset > 12 and id ~= "nest_eggs" then
     local barH = math.max(20, h * (h / contentHeight))
     local barY = y + (h - barH) * (offset / maxOffset)
-    theme.setColor(theme.colors.textDim, 0.35)
-    love.graphics.rectangle("fill", x + w - 4, barY, 3, barH)
+    theme.setColor(theme.colors.bg, 0.75)
+    love.graphics.rectangle("fill", x + w - 5, y, 4, h)
+    theme.setColor(theme.colors.textDim, 0.60)
+    love.graphics.rectangle("fill", x + w - 5, barY, 4, barH)
   end
 end
 
@@ -313,7 +315,7 @@ function widgets.modalFrame(app, title, subtitle, width, height, opts)
     shadowSize = 7,
     borderWidth = 3,
   })
-  theme.goldBar(x + 12, y + 12, width - 24, 44, title, {
+  theme.sectionBar(x + 12, y + 12, width - 24, 44, title, {
     icon = opts.icon,
     font = 18,
   })
@@ -326,7 +328,12 @@ function widgets.modalFrame(app, title, subtitle, width, height, opts)
 end
 
 function widgets.drawTooltip(app)
-  if not app.tooltip then
+  local now = love.timer.getTime()
+  if app.tooltip ~= app.tooltipText then
+    app.tooltipText = app.tooltip
+    app.tooltipSince = now
+  end
+  if not app.tooltip or now - (app.tooltipSince or 0) < 0.35 then
     return
   end
   theme.setFont(10)

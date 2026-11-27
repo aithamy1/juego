@@ -112,7 +112,10 @@ local function drawCard(app, dino, x, y, w, h, now)
   local hover = widgets.hover(app, x, y, w, h)
   if hover then
     app.mouse.hand = true
-    app.tooltip = "Ver la ficha de " .. config.species[dino.species].name .. "."
+    local roleName = dino.role and config.roles[dino.role].name or "Sin rol"
+    local habitatName = dino.habitat and config.habitats[dino.habitat].short or "Sin hábitat"
+    app.tooltip = "Ver la ficha de " .. config.species[dino.species].name
+      .. ". Rol: " .. roleName .. ". Hábitat: " .. habitatName .. "."
   end
   if widgets.click(app, x, y, w, h) then
     app.selectedDino = app.selectedDino == dino.id and nil or dino.id
@@ -133,20 +136,26 @@ local function drawCard(app, dino, x, y, w, h, now)
   theme.setFont(10)
   theme.setColor(theme.colors.text, 1)
   love.graphics.printf(config.species[dino.species].name, x + 4, y + 74, w - 8, "center")
-  widgets.rarityChip(x + 8, y + 90, dino.rarity, true)
+  widgets.rarityChip(x + 8, y + 88, dino.rarity, true)
   local adult = now >= (dino.adultAt or 0)
   theme.setFont(9)
   theme.setColor(adult and theme.colors.textDim or theme.colors.muted, 1)
   love.graphics.printf(adult and ("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s")
-    or ("Creciendo " .. theme.fmtTime((dino.adultAt or now) - now)), x + 4, y + 112, w - 8, "center")
+    or ("Creciendo " .. theme.fmtTime((dino.adultAt or now) - now)), x + 4, y + 110, w - 8, "center")
+  local role = dino.role and config.roles[dino.role] or nil
+  local habitat = dino.habitat and config.habitats[dino.habitat] or nil
+  theme.setFont(8)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf((role and role.short or "—") .. " · " .. (habitat and habitat.short or "—"),
+    x + 4, y + 126, w - 8, "center")
   if stateModule.isCrossing(app.game, dino.id) then
     theme.setFont(8)
     theme.setColor(theme.colors.essence, 1)
-    love.graphics.printf("EN CRUCE", x + 4, y + 128, w - 8, "center")
+    love.graphics.printf("EN CRUCE", x + 4, y + 140, w - 8, "center")
   elseif dino.mutation then
     theme.setFont(8)
     theme.setColor(theme.colors.purple, 1)
-    love.graphics.printf(config.mutations[dino.mutation].name, x + 4, y + 128, w - 8, "center")
+    love.graphics.printf(config.mutations[dino.mutation].name, x + 4, y + 140, w - 8, "center")
   end
 end
 
@@ -261,27 +270,27 @@ local function drawDetail(app, dino, x, y, w, h, now)
     or ("Creciendo: " .. theme.fmtTime((dino.adultAt or now) - now))
   love.graphics.printf(adultStatus, x + 10, y + 180, w - 20, "center")
 
-  local rowY = y + 200
-  local rows = {
-    { "Patrón", config.patterns[dino.genes.pattern].name },
-    { "Color", config.colors[dino.genes.primaryColor].name },
-    { "Secundario", config.secondaryColors[dino.genes.secondaryColor].name },
-    { "Cresta", config.crests[dino.genes.crest].name },
-  }
-  for _, row in ipairs(rows) do
-    theme.setFont(10)
-    theme.setColor(theme.colors.muted, 1)
-    love.graphics.print(row[1], x + 12, rowY)
-    theme.setColor(theme.colors.text, 1)
-    love.graphics.print(row[2], x + 90, rowY)
-    rowY = rowY + 16
-  end
+  widgets.button(app, x + 12, y + 196, 96, 24, "VER GENES", {
+    style = "ghost",
+    font = 8,
+    tooltip = "Ver patrón, colores, cresta y alelos completos.",
+    onClick = function()
+      app:openModal("dino_genes", { dinoId = dino.id })
+    end,
+  })
+  theme.setFont(8)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.printf("Patrón " .. config.patterns[dino.genes.pattern].name
+    .. " · Color " .. config.colors[dino.genes.primaryColor].name, x + 116, y + 198, 128, "left")
+  love.graphics.printf("Sec. " .. config.secondaryColors[dino.genes.secondaryColor].name,
+    x + 116, y + 211, 128, "left")
+  love.graphics.printf("Cresta " .. config.crests[dino.genes.crest].name,
+    x + 116, y + 224, 128, "left")
 
-  rowY = rowY + 4
   theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("Genes funcionales", x + 12, rowY)
-  rowY = rowY + 16
+  love.graphics.print("Genes funcionales", x + 12, y + 244)
+  local rowY = y + 260
   for _, gene in ipairs(config.functionalOrder) do
     local value = dino.functional[gene] or 1
     theme.setFont(9)
@@ -295,12 +304,12 @@ local function drawDetail(app, dino, x, y, w, h, now)
 
   theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print("Producción", x + 12, rowY + 6)
+  love.graphics.print("Producción", x + 12, y + 322)
   theme.setFont(12)
   theme.setColor(theme.colors.amber, 1)
-  love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s", x + 90, rowY + 4)
+  love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, app.game)) .. "/s", x + 90, y + 320)
 
-  widgets.cycle(app, x + 12, y + 366, 112, 38, "Rol", dino.role or "ninguno", roleOptions, function(value)
+  widgets.cycle(app, x + 12, y + 358, 112, 38, "Rol", dino.role or "ninguno", roleOptions, function(value)
     local ok, err = stateModule.setDinoRole(app.game, dino.id, value)
     if ok then
       local name = value == "ninguno" and "Sin rol" or config.roles[value].name
@@ -310,7 +319,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
     end
   end, { tooltip = "El rol se activa cuando el ejemplar es adulto." })
 
-  widgets.cycle(app, x + 132, y + 366, 112, 38, "Hábitat", dino.habitat or "ninguno", habitatOptions, function(value)
+  widgets.cycle(app, x + 132, y + 358, 112, 38, "Hábitat", dino.habitat or "ninguno", habitatOptions, function(value)
     local ok, err = stateModule.setDinoHabitat(app.game, dino.id, value)
     if ok then
       local name = value == "ninguno" and "Sin hábitat" or config.habitats[value].short
@@ -321,7 +330,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
   end, { tooltip = "Cada hábitat admite 3 residentes." })
 
   local busy = stateModule.isCrossing(app.game, dino.id)
-  widgets.button(app, x + 12, y + 414, 112, 34, "A CRUCES", {
+  widgets.button(app, x + 12, y + 404, 112, 34, "A CRUCES", {
     style = "primary",
     font = 9,
     disabled = busy or not adult,
@@ -348,7 +357,7 @@ local function drawDetail(app, dino, x, y, w, h, now)
       end
     end,
   })
-  widgets.button(app, x + 132, y + 414, 112, 34, "LIBERAR", {
+  widgets.button(app, x + 132, y + 404, 112, 34, "LIBERAR", {
     style = "danger",
     font = 8,
     disabled = busy or dino.favorite,
@@ -424,7 +433,7 @@ function breeding.draw(app)
 
   local columns = 4
   local cardW = 108
-  local cardH = 144
+  local cardH = 154
   local gapX = 10
   local gapY = 10
   local rows = math.max(1, math.ceil(math.max(1, #list) / columns))

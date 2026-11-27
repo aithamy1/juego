@@ -14,11 +14,11 @@ local function pityRow(app, x, y, w, label, counter, threshold, color, remaining
   love.graphics.print(label, x, y)
   theme.setFont(8)
   theme.setColor(theme.colors.textDim, 1)
-  love.graphics.printf("en " .. remaining, x + w - 46, y + 1, 46, "right")
+  love.graphics.printf("faltan " .. remaining, x + w - 76, y + 1, 76, "right")
   widgets.progressBar(x, y + 15, w, 6, counter / math.max(1, threshold - 1), color, {})
   theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
-  love.graphics.print(counter .. " / " .. threshold - 1, x, y + 24)
+  love.graphics.print(counter .. " / " .. (threshold - 1) .. " · garantía en " .. threshold, x, y + 24)
 end
 
 local function grassTuft(x, y, height, color, alpha)
@@ -81,13 +81,13 @@ local function drawHabitatTabs(app, x, y)
       app.pastureHabitat = tab.key
     end
     if selected then
-      theme.setColor(theme.colors.gold, 1)
+      theme.setColor(theme.colors.section, 1)
       love.graphics.rectangle("fill", tx, y + 10, segmentW, 16)
-      theme.setColor(theme.colors.ink, 1)
+      theme.setColor(theme.colors.sectionText, 1)
     else
       theme.setColor(hover and theme.colors.panel3 or theme.colors.bg, 0.9)
       love.graphics.rectangle("fill", tx, y + 10, segmentW, 16)
-      theme.setColor(hover and theme.colors.goldLight or theme.colors.textDim, 1)
+      theme.setColor(hover and theme.colors.text or theme.colors.textDim, 1)
     end
     theme.setFont(8)
     love.graphics.printf(tab.label, tx, y + 13, segmentW, "center")
@@ -97,7 +97,7 @@ end
 
 local function drawPasture(app, x, y, w, h, now)
   local game = app.game
-  local time = game.settings.calm and 0 or love.timer.getTime()
+  local time = (game.settings.calm or game.settings.reduceMotion) and 0 or love.timer.getTime()
   theme.panel(x, y, w, h, {
     color = { 0.17, 0.12, 0.08 },
     borderColor = theme.colors.goldDark,
@@ -342,26 +342,44 @@ local function drawGenerator(app, x, y, w, game, now)
     shadowSize = 3,
     borderWidth = 2,
   })
-  if widgets.hover(app, x, y, w, 64) then
-    app.tooltip = "Cada adulto pone a su ritmo. Una colonia grande alarga la puesta."
-  end
-  render.egg(x + 26, y + 34, 0.40, {})
   local remaining, eggDino, interval = economy.nextEggInfo(game, now)
+  if widgets.hover(app, x, y, w, 64) then
+    if eggDino then
+      app.tooltip = "El próximo huevo lo pondrá " .. config.species[eggDino.species].name
+        .. " #" .. eggDino.id .. ". Una colonia grande alarga la puesta."
+    else
+      app.tooltip = "Cada adulto pone a su ritmo. Una colonia grande alarga la puesta."
+    end
+  end
+  if eggDino then
+    local bodyScale = config.species[eggDino.species].bodyScale or 1
+    render.drawDino(eggDino, x + 28, y + 40, 0.28 / bodyScale, {})
+  else
+    render.egg(x + 26, y + 34, 0.40, {})
+  end
   theme.setFont(9)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.print("PRÓXIMO HUEVO" .. (eggDino and (" · " .. config.species[eggDino.species].short) or ""),
-    x + 48, y + 7)
-  theme.setFont(16)
-  theme.setColor(theme.colors.gold, 1)
-  if eggDino then
-    love.graphics.print(theme.fmtTime(math.max(0, remaining)), x + 48, y + 20)
-    widgets.progressBar(x + 48, y + 42, 224, 6,
-      1 - math.max(0, remaining) / math.max(1, interval), theme.colors.amber, {})
-  else
+    x + 64, y + 7)
+  local nestFull = #game.eggs >= economy.nestCapacity(game)
+  if nestFull then
     theme.setFont(11)
-    theme.setColor(theme.colors.muted, 1)
-    love.graphics.print("Sin adultos", x + 48, y + 24)
-    widgets.progressBar(x + 48, y + 42, 224, 6, 0, theme.colors.amber, {})
+    theme.setColor(theme.colors.amber, 1)
+    love.graphics.print("Nido lleno", x + 64, y + 24)
+    widgets.progressBar(x + 64, y + 42, 208, 6, 1, theme.colors.amber, {})
+  else
+    theme.setFont(16)
+    theme.setColor(theme.colors.gold, 1)
+    if eggDino then
+      love.graphics.print(theme.fmtTime(math.max(0, remaining)), x + 64, y + 20)
+      widgets.progressBar(x + 64, y + 42, 208, 6,
+        1 - math.max(0, remaining) / math.max(1, interval), theme.colors.amber, {})
+    else
+      theme.setFont(11)
+      theme.setColor(theme.colors.muted, 1)
+      love.graphics.print("Sin adultos", x + 64, y + 24)
+      widgets.progressBar(x + 64, y + 42, 208, 6, 0, theme.colors.amber, {})
+    end
   end
 
   theme.setFont(8)
@@ -372,7 +390,15 @@ local function drawGenerator(app, x, y, w, game, now)
   love.graphics.print(#game.eggs .. " / " .. economy.nestCapacity(game), x + 292, y + 20)
 
   local canIncubate = #game.eggs > 0 and stateModule.freeIncubator(game) ~= nil
-  widgets.button(app, x + 330, y + 16, 110, 32, "INCUBAR", {
+  local freeSlots = 0
+  for index = 1, economy.incubatorSlots(game) do
+    if not game.incubators[index] then
+      freeSlots = freeSlots + 1
+    end
+  end
+  local incubateCount = math.min(#game.eggs, freeSlots)
+  local incubateLabel = incubateCount > 1 and "INCUBAR TODOS" or (incubateCount == 1 and "INCUBAR 1" or "INCUBAR")
+  widgets.button(app, x + 330, y + 16, 110, 32, incubateLabel, {
     style = canIncubate and "primary" or "secondary",
     disabled = not canIncubate,
     font = 9,
@@ -442,7 +468,10 @@ local function drawIncubatorCard(app, game, index, x, y, w, h, now)
     love.graphics.printf("INCUBADORA " .. index, x, y + 8, w, "center")
     theme.drawLock(x + w / 2, y + 40, 12, theme.colors.muted)
     theme.setFont(7)
-    love.graphics.printf("BLOQUEADA", x, y + 62, w, "center")
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.printf("BLOQUEADA", x, y + 57, w, "center")
+    theme.setColor(theme.colors.textDim, 1)
+    love.graphics.printf("MEJORAR", x, y + 68, w, "center")
   elseif not slot then
     local hover = widgets.hover(app, x, y, w, h)
     if hover then
@@ -483,7 +512,7 @@ local function drawIncubatorCard(app, game, index, x, y, w, h, now)
     theme.setColor(theme.colors.text, 1)
     love.graphics.printf("INCUBADORA " .. index, x, y + 8, w, "center")
     render.egg(x + 25, y + 42, 0.24, {
-      wobble = game.settings.calm and 0
+      wobble = (game.settings.calm or game.settings.reduceMotion) and 0
         or math.sin(love.timer.getTime() * 6 + index) * 0.06 * (1 - progress),
       cross = slot.egg.kind == "cruce",
     })

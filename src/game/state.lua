@@ -48,6 +48,7 @@ local function defaultSettings()
     sfxVolume = config.settings.defaultSfxVolume,
     colorblind = config.settings.defaultColorblind,
     largeText = config.settings.defaultLargeText,
+    reduceMotion = config.settings.defaultReduceMotion,
     fullscreen = config.settings.defaultFullscreen,
     uiScale = config.settings.defaultUiScale,
     calm = false,
@@ -879,7 +880,8 @@ end
 
 function state.setSetting(s, key, value)
   if key == "calm" or key == "music" or key == "sfx"
-    or key == "colorblind" or key == "largeText" or key == "fullscreen" then
+    or key == "colorblind" or key == "largeText" or key == "reduceMotion"
+    or key == "fullscreen" then
     s.settings[key] = not not value
   elseif key == "musicVolume" or key == "sfxVolume" then
     s.settings[key] = math.max(0, math.min(100, math.floor((tonumber(value) or 0) + 0.5)))
@@ -1183,6 +1185,7 @@ function state.normalize(s)
   s.settings.sfxVolume = math.max(0, math.min(100, math.floor((tonumber(s.settings.sfxVolume) or defaults.sfxVolume) + 0.5)))
   s.settings.colorblind = not not s.settings.colorblind
   s.settings.largeText = not not s.settings.largeText
+  s.settings.reduceMotion = not not s.settings.reduceMotion
   s.settings.fullscreen = not not s.settings.fullscreen
   local scaleValid = false
   for _, option in ipairs(config.settings.uiScaleOptions) do

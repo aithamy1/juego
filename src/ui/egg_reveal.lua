@@ -148,7 +148,7 @@ local function drawParticles(anim, elapsed, cx, cy, rarity)
   end
 end
 
-function eggReveal.draw(anim, dino, reveal, x, y, elapsed)
+function eggReveal.draw(anim, dino, reveal, x, y, elapsed, reduced)
   anim = anim or eggReveal.new(reveal.id)
   local cx = x + 380
   local cy = y + 248
@@ -157,7 +157,7 @@ function eggReveal.draw(anim, dino, reveal, x, y, elapsed)
   local crack = clamp((elapsed - 0.18) / (burst - 0.18), 0, 1)
   local intensity = clamp(elapsed / burst, 0, 1)
   local shakeX, shakeY = 0, 0
-  if elapsed >= burst then
+  if elapsed >= burst and not reduced then
     local since = elapsed - burst
     local amount = 6 * math.max(0, 1 - since / 0.28)
     shakeX = math.sin(elapsed * 95) * amount
@@ -183,7 +183,7 @@ function eggReveal.draw(anim, dino, reveal, x, y, elapsed)
     local since = elapsed - burst
     local t = clamp((since - 0.08) / 0.62, 0, 1)
     local pop = smoothstep(t)
-    if t > 0.78 then
+    if t > 0.78 and not reduced then
       pop = pop + math.sin((t - 0.78) / 0.22 * math.pi) * 0.035
     end
     if dino and since >= 0.08 then
@@ -205,11 +205,11 @@ function eggReveal.draw(anim, dino, reveal, x, y, elapsed)
 
   if elapsed < burst then
     local jitter = 0
-    local wobble = math.sin(elapsed * 34) * (0.018 + 0.075 * intensity)
-    if elapsed > 0.25 then
+    local wobble = reduced and 0 or (math.sin(elapsed * 34) * (0.018 + 0.075 * intensity))
+    if elapsed > 0.25 and not reduced then
       jitter = math.sin(elapsed * 67) * (0.7 + 3.4 * intensity)
     end
-    local pulse = 1 + math.sin(elapsed * 22) * 0.018 * intensity
+    local pulse = reduced and 1 or (1 + math.sin(elapsed * 22) * 0.018 * intensity)
     render.egg(ecx + jitter, ecy, 2.0 * pulse, {
       wobble = wobble,
       crack = crack,

@@ -70,6 +70,10 @@ function upgrades.draw(app)
       shadowSize = 3,
       borderWidth = 2,
     })
+    if canBuy and not maxed then
+      theme.setColor(theme.colors.green, 0.95)
+      love.graphics.rectangle("fill", cx, cy, 3, cardH)
+    end
     theme.insetPanel(cx + 9, cy + 9, 28, 28, {
       color = theme.colors.bg,
       borderColor = theme.colors.borderSoft,
@@ -87,9 +91,15 @@ function upgrades.draw(app)
       theme.setFont(10)
       theme.setColor(theme.colors.text, 1)
       love.graphics.print(theme.fmtInt(cost), cx + cardW - 116, cy + 8)
-      theme.setFont(7)
-      theme.setColor(theme.colors.muted, 1)
-      love.graphics.print(def.currency == "amber" and "ámbar" or "esencia", cx + cardW - 116, cy + 22)
+      theme.setFont(8)
+      if canBuy then
+        theme.setColor(theme.colors.green, 1)
+        love.graphics.print("LISTO", cx + cardW - 116, cy + 22)
+      else
+        local missing = math.max(0, cost - (game[def.currency] or 0))
+        theme.setColor(theme.colors.muted, 1)
+        love.graphics.print("faltan " .. theme.fmtInt(missing), cx + cardW - 116, cy + 22)
+      end
     end
 
     theme.setFont(9)

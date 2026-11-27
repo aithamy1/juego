@@ -74,7 +74,9 @@ tests/                   runner y suites con luajit
 
 ## Interfaz
 
-La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, mejoras rápidas y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
+La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, panel contextual y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
+
+La cabecera de cada escena muestra una **acción recomendada** (abrir huevos, incubar, asignar roles o mejorar). El panel derecho cambia según la escena: mejoras rápidas en Nido y Criadero, resumen en Mejoras, colección en Dinodex, registro en Registro y controles en Ajustes. Los tooltips aparecen tras un breve retardo, las compras muestran **LISTO** o **faltan X**, y el dorado queda para el ámbar, las acciones principales y las rarezas.
 
 ## Roles, hábitats y legado
 
@@ -89,11 +91,14 @@ La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxel
 El botón **OPCIONES** de Ajustes abre un panel con:
 
 - **Audio**: volumen independiente de música y efectos, además de los silencios rápidos.
-- **Accesibilidad**: modo daltónico con paleta de alto contraste y texto grande.
+- **Accesibilidad**: modo daltónico con paleta de alto contraste, texto grande y **reducir movimiento** (sin sacudidas, saltos ni nubes en movimiento).
 - **Pantalla**: escala de ventana y pantalla completa.
 - **Mando**: cursor virtual con el stick izquierdo, A para pulsar, B para volver, LB/RB para cambiar de pestaña y Start para guardar.
 - **Datos**: guardar una copia en `save-backup.json`, restaurarla con confirmación y liberar duplicados.
 - **Favoritos y comparación**: en la ficha del Criadero, **F** protege un ejemplar de la liberación y **VS** abre la comparación con otro ejemplar.
+- **Nido directo**: el panel del próximo huevo muestra el retrato y el nombre del ejemplar que lo pondrá; **INCUBAR TODOS** mueve los huevos posibles y las incubadoras bloqueadas llevan a su mejora.
+- **Ficha progresiva**: la ficha resume patrón, color, secundario y cresta; **VER GENES** abre el detalle de alelos, genes funcionales, rol, hábitat y puesta.
+- **Tarjetas del Criadero**: cada tarjeta muestra el rol y el hábitat asignados, además de la producción y la rareza.
 
 La liberación de duplicados conserva la copia de mayor producción, no toca favoritos, ejemplares en cruce ni huevos pendientes y pide confirmación.
 

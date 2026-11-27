@@ -271,7 +271,7 @@ local function drawRevealResult(app, modal, reveal, x, y)
       render.drawDino(dino, x + 380, y + 255, 1.65, {})
     end
   else
-    eggReveal.draw(anim, dino, reveal, x, y, elapsed)
+    eggReveal.draw(anim, dino, reveal, x, y, elapsed, app.game.settings.reduceMotion)
   end
 
   if not show then
@@ -310,7 +310,7 @@ local function drawRevealResult(app, modal, reveal, x, y)
   if not skipped then
     fade = math.max(0, math.min(1, (elapsed - resultAt) / 0.28))
   end
-  local slide = (1 - fade) * 8
+  local slide = app.game.settings.reduceMotion and 0 or ((1 - fade) * 8)
 
   if reveal.pendingSpecies then
     theme.setFont(13)
@@ -1194,6 +1194,11 @@ local function drawOptions(app, modal)
       theme.setLargeText(value)
       app:toast(value and "Texto grande activado." or "Texto normal.", theme.colors.textDim)
     end, { tooltip = "Aumenta un punto las etiquetas pequeñas." })
+  widgets.toggle(app, columns[2] + 12, top + 114, colW - 24, 30, "Reducir movimiento",
+    game.settings.reduceMotion, function(value)
+      stateModule.setSetting(game, "reduceMotion", value)
+      app:toast(value and "Movimiento reducido." or "Animaciones completas.", theme.colors.textDim)
+    end, { tooltip = "Sin sacudidas, saltos ni nubes en movimiento." })
   local scaleOptions = {}
   for _, value in ipairs(config.settings.uiScaleOptions) do
     scaleOptions[#scaleOptions + 1] = {
@@ -1201,13 +1206,13 @@ local function drawOptions(app, modal)
       label = math.floor(value * 100) .. " %",
     }
   end
-  widgets.cycle(app, columns[2] + 12, top + 120, colW - 24, 40, "Escala de ventana",
+  widgets.cycle(app, columns[2] + 12, top + 154, colW - 24, 40, "Escala de ventana",
     game.settings.uiScale, scaleOptions, function(value)
       stateModule.setSetting(game, "uiScale", value)
       app.displayDirty = true
       app:toast("Escala de ventana: " .. math.floor(value * 100) .. " %.", theme.colors.textDim)
     end, { tooltip = "El lienzo se adapta a la ventana." })
-  widgets.toggle(app, columns[2] + 12, top + 172, colW - 24, 30, "Pantalla completa",
+  widgets.toggle(app, columns[2] + 12, top + 206, colW - 24, 30, "Pantalla completa",
     game.settings.fullscreen, function(value)
       stateModule.setSetting(game, "fullscreen", value)
       app.displayDirty = true
@@ -1216,7 +1221,7 @@ local function drawOptions(app, modal)
   theme.setFont(8)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.printf("La escala se limita al tamaño del escritorio. Mando: stick izquierdo mueve el cursor; A pulsa; B vuelve; LB/RB cambian de pestaña; Start guarda.",
-    columns[2] + 12, top + 210, colW - 24, "left")
+    columns[2] + 12, top + 244, colW - 24, "left")
 
   theme.panel(columns[3], top, colW, 420, {
     color = theme.colors.panel,
@@ -1550,6 +1555,123 @@ local function drawCompare(app, modal)
   closeButton(app, x + 720, y + 560, 150, 36, "Cerrar")
 end
 
+local function drawDinoGenes(app, modal)
+  local game = app.game
+  local dino = stateModule.findDino(game, modal.dinoId)
+  if not dino then
+    app:closeModal()
+    return
+  end
+  local species = config.species[dino.species]
+  local x, y = widgets.modalFrame(app, "Genes de " .. species.name,
+    "Fenotipo, alelos y estadísticas del ejemplar #" .. dino.id .. ".", 900, 560)
+  local now = app.now or os.time()
+
+  theme.panel(x + 24, y + 78, 250, 400, {
+    color = theme.colors.panel2,
+    borderColor = theme.colors.borderSoft,
+    shadowSize = 0,
+    borderWidth = 1,
+  })
+  render.drawDino(dino, x + 149, y + 250, 1.05, {})
+  theme.setFont(15)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.printf(species.name, x + 34, y + 286, 230, "center")
+  local chipW = widgets.rarityChip(x + 42, y + 310, dino.rarity)
+  if dino.mutation then
+    widgets.chip(x + 50 + chipW, y + 310, config.mutations[dino.mutation].name, theme.colors.purple, { font = 9 })
+  end
+  local adult = now >= (dino.adultAt or 0)
+  theme.setFont(9)
+  theme.setColor(adult and theme.colors.green or theme.colors.muted, 1)
+  love.graphics.printf(adult and "Adulto" or ("Creciendo: " .. theme.fmtTime((dino.adultAt or now) - now)),
+    x + 34, y + 336, 230, "center")
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Producción", x + 34, y + 360)
+  theme.setFont(12)
+  theme.setColor(theme.colors.amber, 1)
+  love.graphics.print("+" .. theme.fmtRate(economy.dinoRate(dino, game)) .. "/s", x + 130, y + 358)
+  theme.setFont(9)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Rol", x + 34, y + 384)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(dino.role and config.roles[dino.role].name or "Sin rol", x + 130, y + 384)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Hábitat", x + 34, y + 404)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print(dino.habitat and config.habitats[dino.habitat].short or "Sin hábitat", x + 130, y + 404)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.print("Puesta", x + 34, y + 424)
+  theme.setColor(theme.colors.textDim, 1)
+  love.graphics.print(adult and ("cada " .. theme.fmtTime(economy.layInterval(dino, game))) or "—", x + 130, y + 424)
+
+  local mx = x + 300
+  theme.setFont(12)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print("Genes visibles", mx, y + 84)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Dos alelos por gen; el dominante define el aspecto.", mx, y + 102, 290, "left")
+
+  local rows = {
+    { "Patrón", config.patterns[dino.genes.pattern].name, dino.alleles.pattern, config.patterns },
+    { "Color", config.colors[dino.genes.primaryColor].name, dino.alleles.primaryColor, config.colors },
+    { "Secundario", config.secondaryColors[dino.genes.secondaryColor].name, dino.alleles.secondaryColor, config.secondaryColors },
+    { "Cresta", config.crests[dino.genes.crest].name, dino.alleles.crest, config.crests },
+  }
+  local rowY = y + 132
+  for _, row in ipairs(rows) do
+    theme.setFont(9)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print(row[1], mx, rowY)
+    theme.setFont(11)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.print(row[2], mx + 92, rowY - 2)
+    local a, b = row[3] and row[3][1], row[3] and row[3][2]
+    local function alleleName(key)
+      local def = row[4][key]
+      return def and def.name or key
+    end
+    theme.setFont(8)
+    theme.setColor(theme.colors.textDim, 1)
+    love.graphics.print(alleleName(a) .. " / " .. alleleName(b), mx + 92, rowY + 15)
+    if row[1] == "Color" or row[1] == "Secundario" then
+      local rgb = row[4][dino.genes[row[1] == "Color" and "primaryColor" or "secondaryColor"]].rgb
+      theme.setColor(rgb, 1)
+      love.graphics.rectangle("fill", mx + 260, rowY - 2, 14, 14)
+      theme.setColor(theme.colors.borderSoft, 1)
+      love.graphics.rectangle("line", mx + 260, rowY - 2, 14, 14)
+    end
+    rowY = rowY + 52
+  end
+
+  local rx = x + 620
+  theme.setFont(12)
+  theme.setColor(theme.colors.text, 1)
+  love.graphics.print("Genes funcionales", rx, y + 84)
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("Productividad, fertilidad, resistencia y suerte.", rx, y + 102, 250, "left")
+  local fy = y + 132
+  for _, gene in ipairs(config.functionalOrder) do
+    local value = dino.functional[gene] or 1
+    local def = config.functional[gene]
+    theme.setFont(9)
+    theme.setColor(theme.colors.textDim, 1)
+    love.graphics.print(def.short .. " · " .. def.name, rx, fy)
+    theme.setColor(theme.colors.text, 1)
+    love.graphics.printf(tostring(value) .. " / 5", rx, fy - 1, 250, "right")
+    widgets.progressBar(rx, fy + 15, 250, 6, value / 5, theme.colors.green, {})
+    theme.setFont(8)
+    theme.setColor(theme.colors.muted, 1)
+    love.graphics.print(def.desc, rx, fy + 24)
+    fy = fy + 62
+  end
+
+  closeButton(app, x + 720, y + 510, 150, 36, "Cerrar")
+end
+
 function modals.draw(app, modal)
   local handlers = {
     help = drawHelp,
@@ -1567,6 +1689,7 @@ function modals.draw(app, modal)
     bulk_release = drawBulkRelease,
     goals = drawGoals,
     compare = drawCompare,
+    dino_genes = drawDinoGenes,
   }
   local handler = handlers[modal.kind]
   if handler then

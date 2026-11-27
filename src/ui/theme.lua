@@ -23,9 +23,14 @@ theme.colors = {
   panel3 = { 0.135, 0.245, 0.445 },
   border = { 0.260, 0.500, 0.760 },
   borderSoft = { 0.135, 0.260, 0.430 },
-  text = { 0.985, 0.930, 0.800 },
-  textDim = { 0.930, 0.835, 0.655 },
-  muted = { 0.690, 0.655, 0.605 },
+  text = { 0.985, 0.940, 0.820 },
+  textDim = { 0.960, 0.895, 0.755 },
+  muted = { 0.790, 0.755, 0.700 },
+  section = { 0.115, 0.225, 0.355 },
+  sectionLight = { 0.235, 0.405, 0.555 },
+  sectionDark = { 0.045, 0.100, 0.175 },
+  sectionText = { 0.975, 0.920, 0.790 },
+  sectionAccent = { 0.350, 0.720, 0.720 },
   amber = { 0.975, 0.665, 0.180 },
   gold = { 0.965, 0.710, 0.230 },
   goldLight = { 1.000, 0.870, 0.440 },
@@ -83,9 +88,15 @@ function theme.fontFor(size, bold)
   elseif bold == nil then
     bold = size >= 8
   end
+  -- Sube solo las etiquetas más pequeñas; el resto conserva su rejilla.
   local effective = size
-  if theme.textBoost > 0 and size <= 12 then
-    effective = size + 1
+  if size == 8 then
+    effective = 9
+  elseif size == 9 then
+    effective = 10
+  end
+  if theme.textBoost > 0 and effective <= 12 then
+    effective = effective + 1
   end
   local fonts = bold and theme.boldFonts or theme.fonts
   return fonts[effective] or fonts[size] or fonts[14] or theme.fonts[14]
@@ -220,6 +231,41 @@ function theme.goldBar(x, y, w, h, title, opts)
   if opts.right then
     theme.setFont(10)
     theme.setColor(theme.colors.goldDark, 1)
+    love.graphics.printf(opts.right, x + 10, y + h - 15, w - 20, "right")
+  end
+end
+
+-- Barra de sección sobria: el dorado queda para acciones y rarezas.
+function theme.sectionBar(x, y, w, h, title, opts)
+  opts = opts or {}
+  theme.setColor(theme.colors.black, 0.65)
+  love.graphics.rectangle("fill", x + 3, y + 3, w, h)
+  theme.setColor(theme.colors.section, 1)
+  love.graphics.rectangle("fill", x, y, w, h)
+  theme.setColor(theme.colors.sectionLight, 0.9)
+  love.graphics.rectangle("fill", x + 2, y + 2, w - 4, 3)
+  love.graphics.rectangle("fill", x + 2, y + 2, 3, h - 4)
+  theme.setColor(theme.colors.sectionDark, 0.95)
+  love.graphics.rectangle("fill", x + 2, y + h - 5, w - 4, 3)
+  love.graphics.rectangle("fill", x + w - 5, y + 2, 3, h - 4)
+  theme.setColor(theme.colors.sectionAccent, 0.9)
+  love.graphics.rectangle("fill", x + 3, y + h - 4, w - 6, 1)
+  theme.setColor(theme.colors.sectionDark, 1)
+  love.graphics.setLineWidth(2)
+  love.graphics.rectangle("line", x + 1, y + 1, w - 2, h - 2)
+
+  local icon = opts.icon
+  local textX = x + 12
+  if icon then
+    theme.drawNavIcon(icon, x + 24, y + h / 2, 14, theme.colors.sectionText)
+    textX = x + 44
+  end
+  theme.setFont(opts.font or 18, true)
+  theme.setColor(theme.colors.sectionText, 1)
+  love.graphics.print(title, textX, y + (h - theme.fontFor(opts.font or 18, true):getHeight()) / 2 - 1)
+  if opts.right then
+    theme.setFont(10)
+    theme.setColor(theme.colors.sectionText, 0.8)
     love.graphics.printf(opts.right, x + 10, y + h - 15, w - 20, "right")
   end
 end
