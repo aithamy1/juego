@@ -404,7 +404,7 @@ local function drawRevealResult(app, modal, reveal, x, y)
   love.graphics.printf("Semilla " .. app.game.seed .. " · tiradas " .. tostring(reveal.rollStart) .. "–" .. tostring(reveal.rollEnd),
     x + 40, y + 500, 640, "center")
   if fade > 0.30 then
-    widgets.button(app, x + 250, y + 522, 340, 40, "Continuar", {
+    widgets.button(app, x + 210, y + 522, 340, 40, "Continuar", {
       style = "primary",
       onClick = function()
         stateModule.dismissReveal(app.game, reveal.id)
