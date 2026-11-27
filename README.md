@@ -177,12 +177,13 @@ La especificación no fijaba estos detalles; se resolvieron así:
 1. **Rareza en cruces**: el hijo parte de la rareza mayor de los padres y tiene una probabilidad de subir un nivel (`crossRarityUpgradeChance` + suerte de los padres). Se muestra en el simulador.
 2. **Legendario**: la elección entre dos especies se aplica a los huevos del nido, que son los que usan la tirada de rareza. Un legendario de cruce conserva la especie de sus padres; el cruce no sortea especie.
 3. **Pity de mutación**: lo comparten nido y cruces. El pity de rareza solo se aplica al nido, porque la rareza de un cruce es heredada.
-4. **Dinodex**: la “combinación de color” usa el color primario. El secundario se hereda, se muestra en la ficha y en el registro, pero no multiplica las variantes del catálogo (4 patrones × 4 colores × 3 crestas × 6 estados de mutación = 288 por especie, 1.728 en total).
+4. **Dinodex**: la “combinación de color” usa el color primario. El secundario se hereda, se muestra en la ficha y en el registro, pero no multiplica las variantes del catálogo (4 patrones × 4 colores × 3 crestas × 6 estados de mutación = 288 por especie, 2.016 en total).
 5. **Genes funcionales**:
    - Productividad: +12 % de ámbar por punto.
    - Fertilidad: −6 % de tiempo de cruce por punto.
    - Resistencia: −4 % de tiempo de madurez por punto.
    - Suerte: +1 % de probabilidad de subir rareza en un cruce por punto.
+   - El 5 es excepcional: al nacer tiene un 5 %; dos padres con 5 en el mismo gen lo mantienen cerca del 30 % y un 5/5/5/5 con dos padres perfectos ronda el 0,8 %.
 6. **Tope diario**: limita los huevos que genera el nido, no los huevos de cruce.
 7. **Progreso offline**: el tope de 8 horas se aplica al ámbar y a los huevos del nido. Las incubadoras y los cruces ya iniciados terminan; sus resultados se muestran al volver.
 8. **Huevo inicial**: la partida nueva empieza con un huevo y una incubadora. Tras la Gran Migración también se entrega un huevo para arrancar.

@@ -134,6 +134,61 @@ return function(t)
     end
   end)
 
+  t.test("el gen funcional 5 es raro al nacer", function()
+    local r = rng.new(777)
+    local total = 50000
+    local count5 = 0
+    for _ = 1, total do
+      if genetics.randomFunctional(r) == 5 then
+        count5 = count5 + 1
+      end
+    end
+    t.assertNear(count5 / total, 0.05, 0.004, "probabilidad de 5")
+  end)
+
+  t.test("heredar un 5 exige padres con 5 y el 5/5/5/5 es excepcional", function()
+    local function parentWith(value)
+      return {
+        functional = {
+          productivity = value,
+          fertility = value,
+          resilience = value,
+          luck = value,
+        },
+      }
+    end
+    local r = rng.new(888)
+    local total = 50000
+    local fiveBoth, allFive = 0, 0
+    local fiveOne, fiveNone = 0, 0
+    for _ = 1, total do
+      local both = genetics.inheritFunctional(parentWith(5), parentWith(5), r)
+      local one = genetics.inheritFunctional(parentWith(5), parentWith(4), r)
+      local none = genetics.inheritFunctional(parentWith(4), parentWith(4), r)
+      local isAll = true
+      for _, gene in ipairs(config.functionalOrder) do
+        if both[gene] == 5 then
+          fiveBoth = fiveBoth + 1
+        else
+          isAll = false
+        end
+        if one[gene] == 5 then
+          fiveOne = fiveOne + 1
+        end
+        if none[gene] == 5 then
+          fiveNone = fiveNone + 1
+        end
+      end
+      if isAll then
+        allFive = allFive + 1
+      end
+    end
+    t.assertNear(fiveBoth / (total * 4), 0.2975, 0.006, "5 con dos padres 5")
+    t.assertNear(fiveOne / (total * 4), 0.1125, 0.005, "5 con un padre 5")
+    t.assertNear(fiveNone / (total * 4), 0.025, 0.003, "5 sin padres 5")
+    t.assertNear(allFive / total, 0.00783, 0.002, "5/5/5/5")
+  end)
+
   t.test("el Dinodex tiene 288 variantes por especie y 2016 en total", function()
     t.assertEqual(genetics.dexTotalPerSpecies(), 288)
     t.assertEqual(genetics.dexTotal(), 2016)

@@ -1807,6 +1807,11 @@ local function drawDinoGenes(app, modal)
     fy = fy + 62
   end
 
+  theme.setFont(8)
+  theme.setColor(theme.colors.muted, 1)
+  love.graphics.printf("El gen 5 es excepcional: 5 % al nacer. Dos padres con 5 en el mismo gen lo mantienen cerca del 30 %; un 5/5/5/5 con dos padres perfectos ronda el 0,8 %.",
+    x + 300, y + 404, 570, "left")
+
   closeButton(app, x + 720, y + 510, 150, 36, "Cerrar")
 end
 

@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "2.6.0"
+config.version = "2.7.0"
 config.saveVersion = 1
 
 config.window = {
@@ -240,6 +240,19 @@ config.mutations = {
 }
 
 config.functionalOrder = { "productivity", "fertility", "resilience", "luck" }
+
+-- Genes funcionales de 1 a 5. El 5 es excepcional y la herencia tiende a la
+-- media: para mantener un 5 hacen falta dos padres con 5 en ese gen y aun así
+-- se pierde con frecuencia. Un 5/5/5/5 es un objetivo de largo plazo.
+config.functionalRates = {
+  randomWeights = { 26, 30, 24, 15, 5 }, -- probabilidad de 1, 2, 3, 4 y 5
+  inheritUp = 0.25,
+  inheritDown = 0.15,
+  keepFiveBoth = 0.35,
+  keepFiveOne = 0.45,
+  keepFiveNone = 0.10,
+}
+
 config.functional = {
   productivity = {
     name = "Productividad",

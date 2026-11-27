@@ -60,6 +60,15 @@ function genetics.phenotype(alleles)
   return pheno
 end
 
+local functionalEntries = {}
+for value, weight in ipairs(config.functionalRates.randomWeights) do
+  functionalEntries[#functionalEntries + 1] = { value = value, weight = weight }
+end
+
+function genetics.randomFunctional(r)
+  return rngModule.weighted(r, functionalEntries)
+end
+
 function genetics.randomGenotype(r, species)
   local alleles = {}
   for _, gene in ipairs(genetics.visibleOrder) do
@@ -71,7 +80,7 @@ function genetics.randomGenotype(r, species)
   end
   local functional = {}
   for _, gene in ipairs(config.functionalOrder) do
-    functional[gene] = rngInt(r, 1, 5)
+    functional[gene] = genetics.randomFunctional(r)
   end
   return {
     alleles = alleles,
@@ -110,11 +119,35 @@ end
 
 function genetics.inheritFunctional(parentA, parentB, r)
   local functional = {}
+  local rates = config.functionalRates
   for _, gene in ipairs(config.functionalOrder) do
     local a = (parentA.functional and parentA.functional[gene]) or 3
     local b = (parentB.functional and parentB.functional[gene]) or 3
-    local base = math.floor((a + b) / 2 + 0.5)
-    functional[gene] = clamp(base + rngInt(r, -1, 1), 1, 5)
+    local base = math.floor((a + b) / 2)
+    local candidate = base
+    local roll = rngModule.next(r)
+    if roll < rates.inheritUp then
+      candidate = base + 1
+    elseif roll >= 1 - rates.inheritDown then
+      candidate = base - 1
+    end
+    candidate = clamp(candidate, 1, 5)
+
+    -- Un 5 no se hereda por promedio: necesita una confirmación extra.
+    if candidate == 5 then
+      local keep
+      if a == 5 and b == 5 then
+        keep = rates.keepFiveBoth
+      elseif a == 5 or b == 5 then
+        keep = rates.keepFiveOne
+      else
+        keep = rates.keepFiveNone
+      end
+      if rngModule.next(r) >= keep then
+        candidate = 4
+      end
+    end
+    functional[gene] = candidate
   end
   return functional
 end
