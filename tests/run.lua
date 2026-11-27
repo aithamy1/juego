@@ -11,6 +11,7 @@ local suites = {
   "tests.test_state",
   "tests.test_progression",
   "tests.test_sprites",
+  "tests.test_animations",
 }
 
 for _, suite in ipairs(suites) do

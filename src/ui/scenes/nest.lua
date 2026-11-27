@@ -97,7 +97,8 @@ end
 
 local function drawPasture(app, x, y, w, h, now)
   local game = app.game
-  local time = (game.settings.calm or game.settings.reduceMotion) and 0 or love.timer.getTime()
+  local animate = not (game.settings.calm or game.settings.reduceMotion)
+  local time = animate and love.timer.getTime() or 0
   theme.panel(x, y, w, h, {
     color = { 0.17, 0.12, 0.08 },
     borderColor = theme.colors.goldDark,
@@ -264,7 +265,7 @@ local function drawPasture(app, x, y, w, h, now)
         local dx = baseX + 34 + (0.5 + 0.5 * walk) * (segW - 68)
         local flip = math.cos(time * speed + phase) < 0
         local cy = laneCfg.ground - 48 * laneCfg.scale
-        render.drawDino(dino, dx, cy, laneCfg.scale, { flip = flip })
+        render.drawDino(dino, dx, cy, laneCfg.scale, { flip = flip, walk = animate, time = time })
         local hw, hh = 72 * laneCfg.scale, 52 * laneCfg.scale
         if widgets.hover(app, dx - hw, cy - hh, hw * 2, hh * 2) then
           hoveredDino = true

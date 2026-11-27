@@ -183,6 +183,254 @@ local function buildGrid(dino, opts)
   return g
 end
 
+-- Cada especie tiene su propio ciclo de marcha: patas, cola, cabeza o alas.
+-- Las coordenadas son las de la plantilla de 96x56 (1-based).
+local walkStyles = {
+  trex = {
+    frames = 8, fps = 6.0, bob = 1,
+    tail = { x1 = 2, x2 = 28, cy1 = 32, cy2 = 35, h1 = 4, h2 = 7, amp = 2, waves = 1.0 },
+    head = { x1 = 63, y1 = 3, x2 = 96, y2 = 25, amp = 1 },
+    legs = {
+      { x1 = 29, x2 = 45, top = 43, phase = 0 },
+      { x1 = 50, x2 = 66, top = 43, phase = math.pi },
+    },
+    swing = 3,
+    arm = { x1 = 66, y1 = 32, x2 = 80, y2 = 41, amp = 1 },
+  },
+  triceratops = {
+    frames = 8, fps = 5.0, bob = 1,
+    tail = { x1 = 1, x2 = 20, cy1 = 32, cy2 = 31, h1 = 3, h2 = 5, amp = 1, waves = 1.0 },
+    legs = {
+      { x1 = 26, x2 = 31, top = 44, phase = 0 },
+      { x1 = 36, x2 = 42, top = 44, phase = math.pi },
+      { x1 = 51, x2 = 56, top = 44, phase = math.pi },
+      { x1 = 61, x2 = 66, top = 44, phase = 0 },
+    },
+    swing = 2,
+  },
+  stegosaurus = {
+    frames = 8, fps = 4.5, bob = 1,
+    tail = { x1 = 1, x2 = 20, cy1 = 27, cy2 = 31, h1 = 12, h2 = 6, amp = 2, waves = 1.2 },
+    legs = {
+      { x1 = 22, x2 = 31, top = 45, phase = 0 },
+      { x1 = 36, x2 = 39, top = 45, phase = math.pi },
+      { x1 = 44, x2 = 48, top = 45, phase = 0 },
+      { x1 = 55, x2 = 58, top = 45, phase = math.pi },
+      { x1 = 63, x2 = 66, top = 45, phase = 0 },
+    },
+    swing = 2,
+  },
+  ankylosaurus = {
+    frames = 8, fps = 6.0, bob = 1,
+    tail = { x1 = 1, x2 = 24, cy1 = 19, cy2 = 24, h1 = 9, h2 = 5, amp = 1, waves = 1.0 },
+    legs = {
+      { x1 = 32, x2 = 46, top = 46, phase = 0 },
+      { x1 = 51, x2 = 59, top = 46, phase = math.pi },
+      { x1 = 61, x2 = 76, top = 46, phase = math.pi },
+    },
+    swing = 1,
+    shear = { top = 46, amp = 1 },
+  },
+  parasaurolophus = {
+    frames = 8, fps = 7.0, bob = 2,
+    tail = { x1 = 4, x2 = 30, cy1 = 13, cy2 = 24, h1 = 4, h2 = 5, amp = 2, waves = 1.1 },
+    head = { x1 = 68, y1 = 10, x2 = 96, y2 = 40, amp = 1 },
+    legs = {
+      { x1 = 44, x2 = 47, top = 41, phase = 0 },
+      { x1 = 55, x2 = 58, top = 41, phase = math.pi },
+      { x1 = 64, x2 = 67, top = 41, phase = math.pi },
+      { x1 = 70, x2 = 74, top = 41, phase = 0 },
+    },
+    swing = 2,
+  },
+  velociraptor = {
+    frames = 8, fps = 10.0, bob = 1,
+    tail = { x1 = 3, x2 = 52, cy1 = 19, cy2 = 25, h1 = 4, h2 = 6, amp = 2, waves = 1.3 },
+    head = { x1 = 76, y1 = 8, x2 = 96, y2 = 34, amp = 1 },
+    legs = {
+      { x1 = 53, x2 = 58, top = 51, phase = 0 },
+      { x1 = 59, x2 = 67, top = 51, phase = math.pi },
+    },
+    swing = 3,
+  },
+  pteranodon = {
+    frames = 8, fps = 8.0, bob = 2,
+    wings = {
+      { x1 = 2, x2 = 42, y1 = 10, y2 = 30, amp = 3, pivot = 42, tip = 2 },
+      { x1 = 58, x2 = 96, y1 = 10, y2 = 29, amp = 3, pivot = 60, tip = 96 },
+    },
+  },
+}
+
+local function roundInt(value)
+  if value >= 0 then
+    return math.floor(value + 0.5)
+  end
+  return math.ceil(value - 0.5)
+end
+
+local function copyGrid(g)
+  local out = {}
+  for y = 1, H do
+    local src = g[y]
+    local row = {}
+    for x = 1, W do
+      row[x] = src[x]
+    end
+    out[y] = row
+  end
+  return out
+end
+
+local function shiftBand(g, x, y1, y2, dy)
+  y1 = math.max(1, y1)
+  y2 = math.min(H, y2)
+  if dy == 0 or y2 < y1 then
+    return
+  end
+  local column = {}
+  for y = y1, y2 do
+    column[y - y1 + 1] = g[y][x]
+    g[y][x] = "."
+  end
+  for index = 1, #column do
+    local ch = column[index]
+    local y = y1 + index - 1 + dy
+    if ch ~= "." and y >= 1 and y <= H then
+      g[y][x] = ch
+    end
+  end
+end
+
+local function moveRect(g, x1, y1, x2, y2, dx, dy)
+  local cells = {}
+  for y = y1, y2 do
+    for x = x1, x2 do
+      cells[#cells + 1] = { x, y, g[y][x] }
+      g[y][x] = "."
+    end
+  end
+  for index = 1, #cells do
+    local cell = cells[index]
+    local ch = cell[3]
+    local nx, ny = cell[1] + dx, cell[2] + dy
+    if ch ~= "." and nx >= 1 and nx <= W and ny >= 1 and ny <= H then
+      g[ny][nx] = ch
+    end
+  end
+end
+
+local function applyTail(g, config, phase)
+  local span = math.max(1, config.x2 - config.x1)
+  for x = config.x1, config.x2 do
+    local u = (x - config.x1) / span
+    local fall = 1 - u
+    local dy = roundInt(config.amp * fall * math.sin(phase + u * config.waves * math.pi * 2))
+    if dy ~= 0 then
+      local cy = config.cy1 + (config.cy2 - config.cy1) * u
+      local half = config.h1 + (config.h2 - config.h1) * u
+      shiftBand(g, x, roundInt(cy - half), roundInt(cy + half), dy)
+    end
+  end
+end
+
+local function applyHead(g, config, phase)
+  local offset = roundInt(config.amp * math.cos(phase))
+  if offset ~= 0 then
+    moveRect(g, config.x1, config.y1, config.x2, config.y2, 0, offset)
+  end
+end
+
+local function applyLeg(g, leg, amount)
+  local span = math.max(1, H - leg.top)
+  for y = leg.top, H do
+    local t = (y - leg.top) / span
+    local dx = roundInt(amount * t ^ 1.3)
+    if dx ~= 0 then
+      local row = g[y]
+      local segment = {}
+      for x = leg.x1, leg.x2 do
+        segment[#segment + 1] = row[x]
+        row[x] = "."
+      end
+      for index = 1, #segment do
+        local ch = segment[index]
+        local nx = leg.x1 + index - 1 + dx
+        if ch ~= "." and nx >= 1 and nx <= W then
+          row[nx] = ch
+        end
+      end
+    end
+  end
+end
+
+local function applyShear(g, config, phase)
+  for y = 1, config.top - 1 do
+    local t = (config.top - y) / math.max(1, config.top - 1)
+    local dx = roundInt(config.amp * t * math.sin(phase))
+    if dx ~= 0 then
+      local row = g[y]
+      local copy = {}
+      for x = 1, W do
+        copy[x] = row[x]
+      end
+      for x = 1, W do
+        local nx = x + dx
+        row[x] = (nx >= 1 and nx <= W) and copy[nx] or "."
+      end
+    end
+  end
+end
+
+local function applyWings(g, wings, phase)
+  local lift = math.sin(phase)
+  for wingIndex = 1, #wings do
+    local wing = wings[wingIndex]
+    local span = math.max(1, math.abs(wing.tip - wing.pivot))
+    for x = wing.x1, wing.x2 do
+      local u = (x - wing.pivot) / span
+      if wing.tip < wing.pivot then
+        u = -u
+      end
+      u = math.max(0, math.min(1, u))
+      local dy = roundInt(-wing.amp * u * lift)
+      if dy ~= 0 then
+        shiftBand(g, x, wing.y1, wing.y2, dy)
+      end
+    end
+  end
+end
+
+local function applyWalkPose(g, style, frame)
+  local phase = (frame - 1) / style.frames * math.pi * 2
+  if style.tail then
+    applyTail(g, style.tail, phase)
+  end
+  if style.head then
+    applyHead(g, style.head, phase)
+  end
+  if style.legs then
+    local swing = style.swing or 1
+    for index = 1, #style.legs do
+      local leg = style.legs[index]
+      applyLeg(g, leg, swing * math.sin(phase + leg.phase))
+    end
+  end
+  if style.shear then
+    applyShear(g, style.shear, phase)
+  end
+  if style.arm then
+    local arm = style.arm
+    local offset = roundInt(arm.amp * math.sin(phase + 1.2))
+    if offset ~= 0 then
+      moveRect(g, arm.x1, arm.y1, arm.x2, arm.y2, 0, -offset)
+    end
+  end
+  if style.wings then
+    applyWings(g, style.wings, phase)
+  end
+end
+
 local spriteCache = {}
 local spriteOrder = {}
 
@@ -199,8 +447,30 @@ local function spriteKey(dino, opts)
   }, "|")
 end
 
-local function spriteFor(dino, opts)
+local baseGridCache = {}
+local baseGridOrder = {}
+
+local function baseGridFor(dino, opts)
   local key = spriteKey(dino, opts)
+  local cached = baseGridCache[key]
+  if cached then
+    return cached
+  end
+  if #baseGridOrder >= 160 then
+    baseGridCache = {}
+    baseGridOrder = {}
+  end
+  local grid = buildGrid(dino, opts)
+  baseGridCache[key] = grid
+  baseGridOrder[#baseGridOrder + 1] = key
+  return grid
+end
+
+local function spriteFor(dino, opts, frame)
+  local key = spriteKey(dino, opts)
+  if opts.walk then
+    key = key .. "|p" .. tostring(frame or 1)
+  end
   local cached = spriteCache[key]
   if cached then
     return cached
@@ -218,7 +488,14 @@ local function spriteFor(dino, opts)
   love.graphics.setCanvas(canvas)
   love.graphics.clear(0, 0, 0, 0)
   local p = palette(dino)
-  local g = buildGrid(dino, opts)
+  local g
+  if opts.walk then
+    g = copyGrid(baseGridFor(dino, opts))
+    local style = walkStyles[dino.species or "triceratops"] or walkStyles.triceratops
+    applyWalkPose(g, style, frame or 1)
+  else
+    g = baseGridFor(dino, opts)
+  end
 
   local colorFor = {
     b = p.body,
@@ -237,13 +514,22 @@ local function spriteFor(dino, opts)
     p = p.pattern,
   }
 
+  -- Dibuja cada fila por tramos del mismo color: menos llamadas que pixel a pixel.
   for y = 1, H do
-    for x = 1, W do
-      local ch = g[y][x]
-      if ch ~= "." then
+    local row = g[y]
+    local x = 1
+    while x <= W do
+      local ch = row[x]
+      if ch == "." then
+        x = x + 1
+      else
+        local start = x
+        while x <= W and row[x] == ch do
+          x = x + 1
+        end
         local rgb = colorFor[ch] or p.outline
         love.graphics.setColor(rgb[1], rgb[2], rgb[3], 1)
-        love.graphics.rectangle("fill", x - 1, y - 1, 1, 1)
+        love.graphics.rectangle("fill", start - 1, y - 1, x - start, 1)
       end
     end
   end
@@ -260,6 +546,28 @@ local function spriteFor(dino, opts)
   spriteCache[key] = canvas
   spriteOrder[#spriteOrder + 1] = key
   return canvas
+end
+
+function render.walkStyle(species)
+  return walkStyles[species] or walkStyles.triceratops
+end
+
+function render.walkFrame(species, time, seed, tempo)
+  local style = walkStyles[species] or walkStyles.triceratops
+  local cycle = (time or 0) * style.fps * (tempo or 1) + (seed or 0)
+  local loop = cycle % style.frames
+  if loop < 0 then
+    loop = loop + style.frames
+  end
+  return math.floor(loop) + 1, loop / style.frames
+end
+
+function render.walkGrid(dino, frame, opts)
+  opts = opts or {}
+  local grid = copyGrid(baseGridFor(dino, opts))
+  local style = walkStyles[dino.species or "triceratops"] or walkStyles.triceratops
+  applyWalkPose(grid, style, frame or 1)
+  return grid
 end
 
 function render.drawDino(dino, x, y, scale, opts)
@@ -304,9 +612,29 @@ function render.drawDino(dino, x, y, scale, opts)
     love.graphics.setBlendMode("alpha")
   end
 
-  local canvas = spriteFor(dino, opts)
+  local canvas
+  local bob = 0
+  local frame = 1
+  if opts.walk and not opts.silhouette then
+    local style = walkStyles[species] or walkStyles.triceratops
+    local seed = opts.phase or ((dino.id or 0) % 29) * 0.31
+    local tempo = opts.tempo or (0.93 + ((dino.id or 0) % 17) * 0.008)
+    local time = opts.time
+    if time == nil then
+      time = love.timer.getTime()
+    end
+    frame = render.walkFrame(species, time, seed, tempo)
+    local loop = (time * style.fps * tempo + seed) % style.frames
+    if loop < 0 then
+      loop = loop + style.frames
+    end
+    bob = roundInt((style.bob or 0) * math.abs(math.sin(loop / style.frames * math.pi * 2)))
+    canvas = spriteFor(dino, opts, frame)
+  else
+    canvas = spriteFor(dino, opts)
+  end
   love.graphics.setColor(1, 1, 1, alpha)
-  love.graphics.draw(canvas, x, y, 0, ps * flip, ps, ORIGIN_X, ORIGIN_Y)
+  love.graphics.draw(canvas, x, y - bob * ps, 0, ps * flip, ps, ORIGIN_X, ORIGIN_Y)
   love.graphics.setColor(1, 1, 1, 1)
 end
 

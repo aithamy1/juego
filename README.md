@@ -35,6 +35,7 @@ Los tests cubren:
 - Flujo de cruces, prioridad del huevo de cruce, liberación y hitos del Dinodex.
 - Roles, capacidad de hábitats, decoraciones y efectos del árbol de legado.
 - Logros y objetivos con recompensa única, favoritos, duplicados y límites de volumen.
+- Ciclos de marcha por especie: fotogramas distintos, cuerpo conservado y avance temporal.
 
 ## Controles
 
@@ -75,7 +76,7 @@ tests/                   runner y suites con luajit
 
 ## Interfaz
 
-La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, panel contextual y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
+La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, panel contextual y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado, cada especie con su propio ciclo de marcha. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
 
 La cabecera de cada escena muestra una **acción recomendada** (abrir huevos, incubar, asignar roles o mejorar). El panel derecho cambia según la escena: mejoras rápidas en Nido y Criadero, resumen en Mejoras, colección en Dinodex, registro en Registro y controles en Ajustes. Los tooltips aparecen tras un breve retardo, las compras muestran **LISTO** o **faltan X**, y el dorado queda para el ámbar, las acciones principales y las rarezas.
 
@@ -130,7 +131,7 @@ Todo el sonido se genera al arrancar con `love.sound` y `love.audio`, sin archiv
 
 ## Dinosaurios
 
-Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas anatómicas: cuerpo horizontal, cuello, cola y patas proporcionados, contorno oscuro de un píxel, panza clara y una sombra de píxel. Cada especie tiene su rasgo distintivo: gola y tres cuernos del Triceratops, placas y púas del Stegosaurus, coraza y maza del Ankylosaurus, cresta tubular y pico de pato del Parasaurolophus, plumas y garra del Velociraptor, y alas, cresta y pico del Pteranodon. Las plantillas viven en `src/render/dino_sprites.lua`; los genes de patrón, color, cresta y mutación se aplican encima y la pradera los mueve y los gira. Las siluetas anatómicas de base proceden de PhyloPic (CC0) y se han pixelado y coloreado para el juego.
+Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas anatómicas: cuerpo horizontal, cuello, cola y patas proporcionados, contorno oscuro de un píxel, panza clara y una sombra de píxel. Cada especie tiene su rasgo distintivo: gola y tres cuernos del Triceratops, placas y púas del Stegosaurus, coraza y maza del Ankylosaurus, cresta tubular y pico de pato del Parasaurolophus, plumas y garra del Velociraptor, y alas, cresta y pico del Pteranodon. Las plantillas viven en `src/render/dino_sprites.lua`; los genes de patrón, color, cresta y mutación se aplican encima y la pradera los mueve y los gira. Cada especie camina con un ciclo propio: el T-Rex da zancadas pesadas, el Triceratops alterna sus cuatro patas, el Stegosaurus mece las púas de la cola, el Ankylosaurus se balancea y arrastra la maza, el Parasaurolophus sube y baja la cresta, el Velociraptor da pasos rápidos y el Pteranodon aletea. El ritmo varía ligeramente por ejemplar para que no marchen a la vez, y **Reducir movimiento** congela la pradera. Las siluetas anatómicas de base proceden de PhyloPic (CC0) y se han pixelado y coloreado para el juego.
 
 ## Cómo se juega
 
@@ -212,6 +213,7 @@ La especificación no fijaba estos detalles; se resolvieron así:
 26. **Accesibilidad**: el modo daltónico cambia la paleta de rarezas; el texto grande sube un punto las etiquetas de hasta 12 px. La escala de ventana se limita al tamaño del escritorio.
 27. **Puesta**: cada adulto acumula su propio temporizador. La primera puesta llega tras su intervalo; si el nido está lleno, el temporizador se queda preparado. Los huevos de cruce no usan este temporizador.
 28. **Duración de partida**: la primera Gran Migración pide 120 huevos abiertos y está pensada para rondar 4–5 h de juego activo. Las migraciones siguientes son más rápidas por el legado y los puntos del árbol.
+29. **Animación de la pradera**: cada especie tiene su propio ciclo de 8 fotogramas (zancada, cola, cabeza o alas). El ritmo cambia un poco por ejemplar; los fotogramas se generan bajo demanda y se guardan en caché. **Reducir movimiento** y el modo tranquilo desactivan el ciclo y dejan una pose fija.
 
 ## Empaquetar un `.love`
 
