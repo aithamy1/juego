@@ -136,16 +136,17 @@ end
 
 function widgets.chip(x, y, text, color, opts)
   opts = opts or {}
+  local alpha = opts.alpha or 1
   local size = opts.font or 10
   theme.setFont(size)
   local font = theme.fontFor(size)
   local width = font:getWidth(text) + 12
-  theme.setColor(color, 0.20)
+  theme.setColor(color, 0.20 * alpha)
   love.graphics.rectangle("fill", x, y, width, 18)
-  theme.setColor(color, 0.95)
+  theme.setColor(color, 0.95 * alpha)
   love.graphics.setLineWidth(1)
   love.graphics.rectangle("line", x + 0.5, y + 0.5, width - 1, 17)
-  theme.setColor(color, 1)
+  theme.setColor(color, alpha)
   love.graphics.print(text, x + 6, y + (18 - font:getHeight()) / 2 - 1)
   return width
 end

@@ -175,6 +175,8 @@ function app:update(dt, now)
       self:toast("Llevas " .. reminder .. " minutos jugando. Puedes parar cuando quieras.", theme.colors.essence)
     end
   end
+
+  modals.update(self, dt)
 end
 
 -- Cabecera

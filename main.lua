@@ -4,6 +4,7 @@ local save = require("src.game.save")
 local theme = require("src.ui.theme")
 local appModule = require("src.ui.app")
 local modals = require("src.ui.modals")
+local audio = require("src.audio.audio")
 
 local canvas
 local uiApp
@@ -80,6 +81,12 @@ function love.load()
   uiApp = appModule.new(game)
   uiApp.saveCallback = writeSave
 
+  local audioOk, audioError = audio.load()
+  if not audioOk then
+    print("Audio no disponible: " .. tostring(audioError))
+  end
+  audio.update(0, game.settings)
+
   if loadError then
     uiApp:toast("No se pudo cargar la partida anterior. Se guardó una copia y se empezó de cero.", theme.colors.red)
   end
@@ -98,6 +105,7 @@ end
 function love.update(dt)
   local now = os.time()
   uiApp:update(dt, now)
+  audio.update(dt, game.settings)
 
   autosaveTimer = autosaveTimer + dt
   if autosaveTimer >= config.time.autosave then
@@ -160,7 +168,7 @@ function love.keypressed(key)
   end
   if key == "space" and uiApp.modal and uiApp.modal.kind == "reveal" then
     uiApp.modal.skipped = true
-    uiApp.modal.revealStart = love.timer.getTime() - 2
+    uiApp.modal.revealStart = love.timer.getTime() - config.time.revealResult - 1
     return
   end
   if key == "f5" then

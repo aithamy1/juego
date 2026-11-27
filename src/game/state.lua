@@ -42,6 +42,8 @@ end
 
 local function defaultSettings()
   return {
+    music = config.settings.defaultMusic,
+    sfx = config.settings.defaultSfx,
     calm = false,
     reminder = config.settings.defaultReminder,
     dailyCap = config.settings.defaultDailyCap,
@@ -678,8 +680,8 @@ function state.prestigeNow(s, founderIds, now)
 end
 
 function state.setSetting(s, key, value)
-  if key == "calm" then
-    s.settings.calm = not not value
+  if key == "calm" or key == "music" or key == "sfx" then
+    s.settings[key] = not not value
   elseif key == "reminder" then
     local valid = false
     for _, option in ipairs(config.settings.reminderOptions) do

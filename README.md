@@ -49,9 +49,10 @@ Los tests cubren:
 
 ```
 main.lua                 arranque, canvas, escala, guardado y entrada
-conf.lua                 ventana 1280×720, redimensionable, sin audio
+conf.lua                 ventana 1280×720, redimensionable y audio activado
 assets/fonts/            Pixelify Sans y su licencia OFL
 lib/json.lua             JSON propio y determinista
+src/audio/audio.lua      música y efectos procedurales (sin archivos externos)
 src/game/                lógica pura, sin love.*
   config.lua             única fuente de verdad de tasas, tiempos y costes
   rng.lua                mulberry32 con semilla y contador
@@ -64,12 +65,22 @@ src/game/                lógica pura, sin love.*
 src/render/dino.lua      dinosaurios, huevos y mutaciones
 src/render/dino_sprites.lua  plantillas pixel-art de 96×56
 src/ui/                  tema, widgets, escenas y modales
+src/ui/egg_reveal.lua    animación de grietas, rotura y salida del dinosaurio
 tests/                   runner y suites con luajit
 ```
 
 ## Interfaz
 
 La pantalla sigue el lenguaje de la referencia: fondo morado con trama de píxeles, tablero de madera, catálogo a la izquierda, mejoras rápidas y prestigio a la derecha, fuente pixel-art y paneles con bisel. Los atajos 1–7 se muestran siempre en el catálogo y los botones tienen respuesta al pulsarlos. El teléfono, los tickets y el tablero están dibujados por código. En el Nido, el área central es una pradera animada: césped que se mece, nubes, valla y hasta seis dinosaurios caminando de lado a lado. Al hacer clic en uno se abre su ficha en el Criadero; los huevos están debajo y las incubadoras en la columna derecha. El Criadero muestra la rejilla y la ficha; el Cruces enfrenta el simulador y la lista de adultos.
+
+## Audio
+
+Todo el sonido se genera al arrancar con `love.sound` y `love.audio`, sin archivos de audio externos:
+
+- **Música**: un bucle de 8 compases en La menor con pad, bajo, arpegio y melodía, más percusión suave. Se reproduce en bucle y baja de volumen durante la eclosión.
+- **Efectos**: crujidos progresivos de cáscara, rotura y un acorde ascendente al salir el dinosaurio. El tono del acorde sube ligeramente con la rareza.
+- **Ajustes**: **Música** y **Efectos de sonido** se pueden silenciar por separado desde Ajustes. La elección se guarda en la partida y se conserva al migrar.
+- Si no hay dispositivo de audio, el juego sigue arrancando sin sonido.
 
 ## Dinosaurios
 
@@ -90,7 +101,7 @@ Los dinosaurios son sprites de píxel de **96×56** construidos sobre siluetas a
 - El botón **Ver probabilidades exactas** del Nido muestra las tasas base y efectivas del motor, las garantías y cada mutación con su probabilidad.
 - Las barras de pity están siempre visibles. No se reinician con el prestigio.
 - El **Registro** guarda fecha, origen, rareza, especie, genes, mutación, garantías, semilla y rango de tiradas de cada apertura. Compara las tasas reales del nido con las teóricas.
-- La apertura no usa destellos que insinúen rarezas falsas. La animación dura alrededor de un segundo y se puede saltar con clic o `Espacio`.
+- La apertura no usa destellos que insinúen rarezas falsas. La cáscara se agrieta poco a poco durante 2,35 segundos, se abre en dos mitades y el dinosaurio sale con un efecto de sonido. Se puede saltar con clic, `Esc` o `Espacio`; el modo tranquilo la desactiva.
 - No hay anuncios, compras, moneda real, urgencia artificial ni falsos “casi lo consigues”. El modo tranquilo desactiva animaciones y el tope diario es opcional.
 
 ## Ajustar `config.lua`
@@ -129,7 +140,7 @@ La especificación no fijaba estos detalles; se resolvieron así:
 13. **Especie**: la tirada de especie es uniforme entre las seis. Los cruces solo son entre la misma especie.
 14. **Colores**: paleta fija de cuatro primarios y cuatro secundarios; la herencia usa dominancia simple.
 15. **Guardado**: JSON propio, clave `version` y migraciones. La lectura/escritura la hace `main.lua`; `src/game/save.lua` no toca `love.filesystem`.
-16. **Audio**: fuera del alcance; el módulo de audio está desactivado para que el juego arranque sin dispositivos de sonido.
+16. **Audio**: música y efectos se sintetizan al arrancar y no usan archivos externos. El audio se puede silenciar; si el dispositivo falla, el juego continúa en silencio.
 17. **Pity**: la garantía sustituye la tirada en el huevo número `rareAt`, `legendaryAt` o `mutationAt` desde el último resultado correspondiente. Los contadores se reinician solo al obtener ese resultado.
 18. **Rendimiento**: la rejilla del criadero solo dibuja las tarjetas visibles. Se probó la carga y el desplazamiento con 200 ejemplares; la tasa de 60 FPS depende de la GPU (el entorno de desarrollo usa render por software y no permite validarla).
 19. **Fuente**: Pixelify Sans se incluye bajo SIL OFL para acercar la interfaz a la referencia pixel-art; no se usan imágenes externas.
@@ -145,4 +156,4 @@ Luego se puede abrir el archivo con LÖVE o distribuir el `.love`.
 
 ## Fuera de alcance
 
-Multijugador, cuentas, ranking, intercambio, compras con dinero real, anuncios, cruces entre especies, edición genética, sonido, imágenes o sonidos externos.
+Multijugador, cuentas, ranking, intercambio, compras con dinero real, anuncios, cruces entre especies, edición genética, audio grabado, imágenes o sonidos externos.

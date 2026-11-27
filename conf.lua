@@ -16,6 +16,6 @@ function love.conf(t)
   t.modules.joystick = false
   t.modules.physics = false
   t.modules.video = false
-  t.modules.audio = false
-  t.modules.sound = false
+  t.modules.audio = true
+  t.modules.sound = true
 end

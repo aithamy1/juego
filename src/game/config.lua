@@ -4,7 +4,7 @@ local config = {}
 
 config.title = "Criadero de Ámbar"
 config.subtitle = "Cría, colecciona y migra"
-config.version = "1.7.0"
+config.version = "1.8.0"
 config.saveVersion = 1
 
 config.window = {
@@ -22,7 +22,10 @@ config.time = {
   adultTime = 45,            -- segundos hasta la edad adulta
   offlineCap = 8 * 3600,     -- tope de progreso offline
   autosave = 10,             -- segundos entre autoguardados
-  revealDuration = 1.1,      -- animación de apertura (se puede saltar)
+  revealDuration = 2.35,     -- animación de apertura completa (se puede saltar)
+  revealResult = 2.00,       -- momento en que aparece el resultado
+  revealBurst = 1.35,        -- rotura de la cáscara y salida del dinosaurio
+  revealCracks = { 0.32, 0.52, 0.75, 0.98, 1.18 },
   crossRarityUpgradeChance = 0.10,
   crossRarityLuckBonus = 0.01,
   crossRarityUpgradeCap = 0.40,
@@ -327,6 +330,8 @@ config.settings = {
   dailyCapOptions = { 0, 25, 50, 100, 200 },
   defaultReminder = 0,
   defaultDailyCap = 0,
+  defaultMusic = true,
+  defaultSfx = true,
 }
 
 config.stats = {

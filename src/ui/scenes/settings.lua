@@ -40,22 +40,32 @@ function settings.draw(app)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.print("Se guardan en tu partida local.", x + 12, y + 28)
 
-  widgets.toggle(app, x + 12, y + 48, 326, 32, "Modo tranquilo", game.settings.calm, function(value)
+  widgets.toggle(app, x + 12, y + 48, 326, 30, "Música", game.settings.music, function(value)
+    stateModule.setSetting(game, "music", value)
+    app:toast(value and "Música activada." or "Música silenciada.", theme.colors.textDim)
+  end, { tooltip = "Música de fondo generada por el juego." })
+
+  widgets.toggle(app, x + 12, y + 82, 326, 30, "Efectos de sonido", game.settings.sfx, function(value)
+    stateModule.setSetting(game, "sfx", value)
+    app:toast(value and "Efectos activados." or "Efectos silenciados.", theme.colors.textDim)
+  end, { tooltip = "Crujidos de cáscara y sonido de eclosión." })
+
+  widgets.toggle(app, x + 12, y + 116, 326, 30, "Modo tranquilo", game.settings.calm, function(value)
     stateModule.setSetting(game, "calm", value)
     app:toast(value and "Modo tranquilo activado." or "Animaciones activadas.", theme.colors.textDim)
   end, { tooltip = "Sin animaciones de apertura." })
 
-  widgets.cycle(app, x + 12, y + 90, 326, 44, "Recordatorio de sesión", game.settings.reminder, reminderOptions(), function(value)
+  widgets.cycle(app, x + 12, y + 152, 326, 40, "Recordatorio de sesión", game.settings.reminder, reminderOptions(), function(value)
     stateModule.setSetting(game, "reminder", value)
     app.lastReminder = os.time()
   end, { tooltip = "Aviso discreto cada 60 o 90 minutos." })
 
-  widgets.cycle(app, x + 12, y + 142, 326, 44, "Tope diario de huevos", game.settings.dailyCap, capOptions(), function(value)
+  widgets.cycle(app, x + 12, y + 196, 326, 40, "Tope diario de huevos", game.settings.dailyCap, capOptions(), function(value)
     stateModule.setSetting(game, "dailyCap", value)
   end, { tooltip = "0 significa sin tope. Solo afecta al nido." })
 
   theme.setColor(theme.colors.borderSoft, 0.9)
-  love.graphics.rectangle("fill", x + 12, y + 202, 326, 1)
+  love.graphics.rectangle("fill", x + 12, y + 244, 326, 1)
 
   theme.setFont(8)
   theme.setColor(theme.colors.textDim, 1)
@@ -65,7 +75,7 @@ function settings.draw(app)
     "Las probabilidades del panel son las del motor.",
     "El Dinodex, el pity y el registro nunca se reinician.",
   }
-  local textY = y + 216
+  local textY = y + 256
   for _, text in ipairs(texts) do
     theme.setColor(theme.colors.gold, 0.8)
     love.graphics.rectangle("fill", x + 14, textY + 3, 4, 4)
@@ -74,7 +84,7 @@ function settings.draw(app)
     textY = textY + 18
   end
 
-  theme.panel(x + 12, y + 366, 326, 84, {
+  theme.panel(x + 12, y + 380, 326, 82, {
     color = theme.colors.panel2,
     borderColor = theme.colors.borderSoft,
     shadowSize = 0,
@@ -82,14 +92,14 @@ function settings.draw(app)
   })
   theme.setFont(8)
   theme.setColor(theme.colors.gold, 1)
-  love.graphics.print("TRANSPARENCIA", x + 22, y + 376)
+  love.graphics.print("TRANSPARENCIA", x + 22, y + 390)
   theme.setFont(7)
   theme.setColor(theme.colors.muted, 1)
   love.graphics.print("Pity raro " .. (game.pity.rare or 0) .. "/" .. (config.rates.pity.rareAt - 1)
-    .. " · legendario " .. (game.pity.legendary or 0) .. "/" .. (config.rates.pity.legendaryAt - 1), x + 22, y + 392)
+    .. " · legendario " .. (game.pity.legendary or 0) .. "/" .. (config.rates.pity.legendaryAt - 1), x + 22, y + 406)
   love.graphics.print("Mutación " .. (game.pity.mutation or 0) .. "/" .. (config.rates.pity.mutationAt - 1)
-    .. " · " .. theme.fmtInt(game.stats.hatched) .. " huevos abiertos", x + 22, y + 406)
-  widgets.button(app, x + 22, y + 420, 120, 20, "ABRIR REGISTRO", {
+    .. " · " .. theme.fmtInt(game.stats.hatched) .. " huevos abiertos", x + 22, y + 420)
+  widgets.button(app, x + 22, y + 434, 120, 20, "ABRIR REGISTRO", {
     style = "ghost",
     font = 7,
     onClick = function()
@@ -97,7 +107,7 @@ function settings.draw(app)
     end,
   })
 
-  widgets.button(app, x + 12, y + 316, 150, 32, "GUARDAR AHORA", {
+  widgets.button(app, x + 12, y + 338, 150, 32, "GUARDAR AHORA", {
     style = "secondary",
     font = 8,
     onClick = function()
@@ -105,7 +115,7 @@ function settings.draw(app)
       app:toast("Partida guardada.", theme.colors.green)
     end,
   })
-  widgets.button(app, x + 174, y + 316, 164, 32, "CÓMO SE JUEGA", {
+  widgets.button(app, x + 174, y + 338, 164, 32, "CÓMO SE JUEGA", {
     style = "ghost",
     font = 8,
     onClick = function()

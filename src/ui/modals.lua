@@ -7,6 +7,7 @@ local prestige = require("src.game.prestige")
 local theme = require("src.ui.theme")
 local widgets = require("src.ui.widgets")
 local render = require("src.render.dino")
+local eggReveal = require("src.ui.egg_reveal")
 
 local modals = {}
 
@@ -228,45 +229,93 @@ local function drawRelease(app, modal)
 end
 
 -- Apertura de huevo
+local function revealIsPending(app, reveal)
+  if not reveal then
+    return false
+  end
+  for _, candidate in ipairs(app.game.pendingReveals) do
+    if candidate.id == reveal.id then
+      return true
+    end
+  end
+  return false
+end
+
 local function drawRevealResult(app, modal, reveal, x, y)
   local elapsed = love.timer.getTime() - (modal.revealStart or 0)
-  local duration = config.time.revealDuration
-  local show = modal.skipped or app.game.settings.calm or elapsed >= duration
-  if not show then
-    theme.setFont(18)
-    theme.setColor(theme.colors.text, 1)
-    love.graphics.printf("Abriendo huevo", x + 40, y + 84, 640, "center")
-    render.egg(x + 380, y + 250, 2.0, {
-      wobble = math.sin(elapsed * 18) * 0.08 * (1 - elapsed / duration),
-    })
-    if elapsed > 0.45 then
-      theme.setColor(theme.colors.dark or theme.colors.bg, 0.8)
-      love.graphics.setLineWidth(2)
-      love.graphics.line(x + 360, y + 222, x + 370, y + 238, x + 362, y + 250)
+  local resultAt = config.time.revealResult
+  local calm = app.game.settings.calm
+  local skipped = modal.skipped or calm
+  local show = skipped or elapsed >= resultAt
+  local anim = modal.anim
+  if not anim then
+    anim = eggReveal.new(reveal.id)
+    modal.anim = anim
+  end
+
+  local dino = nil
+  if not reveal.pendingSpecies then
+    dino = reveal.dinoId and stateModule.findDino(app.game, reveal.dinoId) or nil
+    if not dino then
+      dino = {
+        id = reveal.dinoId or 1,
+        species = reveal.species,
+        genes = reveal.genes,
+        mutation = reveal.mutation,
+      }
     end
+  end
+
+  if skipped then
+    if dino then
+      render.drawDino(dino, x + 380, y + 255, 1.65, {})
+    end
+  else
+    eggReveal.draw(anim, dino, reveal, x, y, elapsed)
+  end
+
+  if not show then
+    local fade = 1
+    if elapsed > resultAt - 0.30 then
+      fade = math.max(0, math.min(1, (resultAt - elapsed) / 0.30))
+    end
+    local bursting = elapsed >= config.time.revealBurst
+    theme.setFont(18)
+    theme.setColor(theme.colors.text, fade)
+    love.graphics.printf(bursting and "Saliendo del huevo" or "Abriendo huevo",
+      x + 40, y + 84, 640, "center")
     theme.setFont(11)
-    theme.setColor(theme.colors.muted, 1)
-    love.graphics.printf("El resultado se mostrará tal cual. Nada de destellos que sugieran rareza falsa.",
-      x + 120, y + 440, 600, "center")
+    theme.setColor(theme.colors.muted, fade)
+    love.graphics.printf(bursting
+      and "El resultado se mostrará tal cual. Nada de destellos que sugieran rareza falsa."
+      or "La cáscara se rompe poco a poco. Nada de destellos que sugieran rareza falsa.",
+      x + 100, y + 440, 640, "center")
     theme.setFont(10)
-    theme.setColor(theme.colors.amber, 1)
+    theme.setColor(theme.colors.amber, fade)
     love.graphics.printf("Clic para saltar", x + 120, y + 480, 600, "center")
     return
   end
 
+  local fade = 1
+  if not skipped then
+    fade = math.max(0, math.min(1, (elapsed - resultAt) / 0.28))
+  end
+  local slide = (1 - fade) * 8
+
   if reveal.pendingSpecies then
     theme.setFont(13)
-    theme.setColor(theme.colors.amber, 1)
-    love.graphics.printf("Legendario: elige una de las dos especies", x + 40, y + 96, 640, "center")
+    theme.setColor(theme.colors.amber, fade)
+    love.graphics.printf("Legendario: elige una de las dos especies", x + 40, y + 96 + slide, 640, "center")
     local cardW = 280
     local cardH = 270
     local startX = x + 70
     for i, species in ipairs(reveal.pendingSpecies) do
       local cx = startX + (i - 1) * (cardW + 30)
-      local cy = y + 140
+      local cy = y + 140 + slide
       theme.panel(cx, cy, cardW, cardH, {
         color = theme.colors.panel2,
         borderColor = theme.colors.amber,
+        alpha = fade,
       })
       local sample = {
         id = 1,
@@ -274,101 +323,90 @@ local function drawRevealResult(app, modal, reveal, x, y)
         genes = reveal.genes,
         mutation = reveal.mutation,
       }
-      render.drawDino(sample, cx + cardW / 2, cy + 105, 1.05, {})
+      render.drawDino(sample, cx + cardW / 2, cy + 105, 1.05, { alpha = fade })
       theme.setFont(16)
-      theme.setColor(theme.colors.text, 1)
+      theme.setColor(theme.colors.text, fade)
       love.graphics.printf(config.species[species].name, cx, cy + 170, cardW, "center")
       theme.setFont(9)
-      theme.setColor(theme.colors.muted, 1)
+      theme.setColor(theme.colors.muted, fade)
       love.graphics.printf(config.species[species].desc, cx + 20, cy + 192, cardW - 40, "center")
-      widgets.button(app, cx + 60, cy + 226, cardW - 120, 30, "Elegir", {
-        style = "primary",
-        onClick = function()
-          local ok, dinoOrErr = stateModule.chooseSpecies(app.game, reveal.id, species)
-          if ok then
-            app:toast("Has elegido " .. config.species[species].name .. ".", theme.colors.amber)
-          else
-            app:toast(dinoOrErr or "No se pudo elegir.", theme.colors.red)
-          end
-        end,
-      })
+      if fade > 0.30 then
+        widgets.button(app, cx + 60, cy + 226, cardW - 120, 30, "Elegir", {
+          style = "primary",
+          onClick = function()
+            local ok, dinoOrErr = stateModule.chooseSpecies(app.game, reveal.id, species)
+            if ok then
+              app:toast("Has elegido " .. config.species[species].name .. ".", theme.colors.amber)
+            else
+              app:toast(dinoOrErr or "No se pudo elegir.", theme.colors.red)
+            end
+          end,
+        })
+      end
     end
     return
   end
 
-  local dino = reveal.dinoId and stateModule.findDino(app.game, reveal.dinoId) or nil
-  if dino then
-    render.drawDino(dino, x + 380, y + 255, 1.65, {})
-  else
-    render.drawDino({
-      id = reveal.dinoId or 1,
-      species = reveal.species,
-      genes = reveal.genes,
-      mutation = reveal.mutation,
-    }, x + 380, y + 255, 1.65, {})
-  end
   theme.setFont(10)
-  theme.setColor(theme.colors.muted, 1)
-  love.graphics.printf("Huevo abierto", x + 40, y + 78, 640, "center")
+  theme.setColor(theme.colors.muted, fade)
+  love.graphics.printf("Huevo abierto", x + 40, y + 78 + slide, 640, "center")
   theme.setFont(24)
-  theme.setColor(theme.colors.text, 1)
-  love.graphics.printf(config.species[reveal.species].name, x + 40, y + 96, 640, "center")
+  theme.setColor(theme.colors.text, fade)
+  love.graphics.printf(config.species[reveal.species].name, x + 40, y + 96 + slide, 640, "center")
 
   local rarityColor = theme.rarityColor(reveal.rarity)
   local rarityWidth = widgets.chipWidth(theme.rarityName(reveal.rarity), 11)
   local mutationWidth = reveal.mutation and widgets.chipWidth(config.mutations[reveal.mutation].name, 11) or 0
   local totalWidth = rarityWidth + (reveal.mutation and (mutationWidth + 8) or 0)
   local chipX = x + 380 - totalWidth / 2
-  widgets.chip(chipX, y + 388, theme.rarityName(reveal.rarity), rarityColor, { font = 11 })
+  widgets.chip(chipX, y + 388, theme.rarityName(reveal.rarity), rarityColor, { font = 11, alpha = fade })
   if reveal.mutation then
-    widgets.chip(chipX + rarityWidth + 8, y + 388, config.mutations[reveal.mutation].name, theme.colors.purple, { font = 11 })
+    widgets.chip(chipX + rarityWidth + 8, y + 388, config.mutations[reveal.mutation].name, theme.colors.purple, {
+      font = 11,
+      alpha = fade,
+    })
   end
 
   theme.setFont(11)
-  theme.setColor(theme.colors.textDim, 1)
+  theme.setColor(theme.colors.textDim, fade)
   love.graphics.printf(geneSummary(reveal.genes), x + 40, y + 424, 640, "center")
   local guarantee = guaranteesText(reveal.guaranteed)
   if guarantee then
     theme.setFont(10)
-    theme.setColor(theme.colors.amber, 1)
+    theme.setColor(theme.colors.amber, fade)
     love.graphics.printf(guarantee, x + 40, y + 444, 640, "center")
   end
   if reveal.newDex then
     theme.setFont(10)
-    theme.setColor(theme.colors.green, 1)
+    theme.setColor(theme.colors.green, fade)
     love.graphics.printf("Nuevo en el Dinodex", x + 40, y + 462, 640, "center")
   end
   if reveal.milestone then
     theme.setFont(10)
-    theme.setColor(theme.colors.purple, 1)
+    theme.setColor(theme.colors.purple, fade)
     local milestonePct = config.dinodex.milestoneFractions[reveal.milestone] * 100
     love.graphics.printf("Hito del Dinodex " .. theme.fmt(milestonePct, 0) .. " % alcanzado: +"
       .. theme.fmt(config.dinodex.milestoneBonus * 100, 0) .. " % de producción.",
       x + 40, y + 478, 640, "center")
   end
   theme.setFont(9)
-  theme.setColor(theme.colors.muted, 1)
+  theme.setColor(theme.colors.muted, fade)
   love.graphics.printf("Semilla " .. app.game.seed .. " · tiradas " .. tostring(reveal.rollStart) .. "–" .. tostring(reveal.rollEnd),
     x + 40, y + 500, 640, "center")
-  widgets.button(app, x + 250, y + 522, 340, 40, "Continuar", {
-    style = "primary",
-    onClick = function()
-      stateModule.dismissReveal(app.game, reveal.id)
-      app:closeModal()
-    end,
-  })
+  if fade > 0.30 then
+    widgets.button(app, x + 250, y + 522, 340, 40, "Continuar", {
+      style = "primary",
+      onClick = function()
+        stateModule.dismissReveal(app.game, reveal.id)
+        app:closeModal()
+      end,
+    })
+  end
 end
 
 local function drawReveal(app, modal)
   local reveal = modal.reveal
-  local current = false
-  for _, candidate in ipairs(app.game.pendingReveals) do
-    if candidate.id == reveal.id then
-      current = true
-      break
-    end
-  end
-  if not current then
+  if not revealIsPending(app, reveal) then
     app:closeModal()
     return
   end
@@ -385,7 +423,7 @@ local function drawReveal(app, modal)
   })
 
   local elapsed = love.timer.getTime() - (modal.revealStart or 0)
-  if not modal.skipped and not app.game.settings.calm and elapsed < config.time.revealDuration then
+  if not modal.skipped and not app.game.settings.calm and elapsed < config.time.revealResult then
     if app.click then
       modal.skipped = true
       app.click = nil
@@ -393,6 +431,27 @@ local function drawReveal(app, modal)
   end
 
   drawRevealResult(app, modal, reveal, x, y)
+end
+
+function modals.update(app, dt)
+  local modal = app.modal
+  if not modal or modal.kind ~= "reveal" then
+    return
+  end
+  local reveal = modal.reveal
+  if not revealIsPending(app, reveal) then
+    return
+  end
+  if not modal.anim then
+    modal.anim = eggReveal.new(reveal.id)
+  end
+  if modal.skipped or app.game.settings.calm then
+    return
+  end
+  local elapsed = love.timer.getTime() - (modal.revealStart or 0)
+  if elapsed <= config.time.revealDuration then
+    eggReveal.sync(modal.anim, elapsed, reveal, app.game)
+  end
 end
 
 -- Offline
@@ -772,7 +831,7 @@ function modals.escape(app)
       return
     end
     app.modal.skipped = true
-    app.modal.revealStart = love.timer.getTime() - 2
+    app.modal.revealStart = love.timer.getTime() - config.time.revealResult - 1
     return
   end
   app:closeModal()

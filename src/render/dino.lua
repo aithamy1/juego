@@ -309,29 +309,87 @@ function render.drawDino(dino, x, y, scale, opts)
   love.graphics.setColor(1, 1, 1, 1)
 end
 
+local eggCracks = {
+  { at = 0.04, points = { { -1, -27 }, { 2, -23 }, { 0, -20 }, { 4, -16 }, { 2, -13 } } },
+  { at = 0.18, points = { { 5, -14 }, { 8, -10 }, { 5, -6 }, { 9, -2 } } },
+  { at = 0.33, points = { { -2, -18 }, { -5, -14 }, { -2, -10 }, { -6, -5 }, { -3, -1 } } },
+  { at = 0.49, points = { { -7, 1 }, { -11, 5 }, { -8, 9 }, { -12, 13 }, { -9, 17 } } },
+  { at = 0.63, points = { { 3, -7 }, { 6, -3 }, { 3, 1 }, { 7, 5 }, { 4, 9 } } },
+  { at = 0.77, points = { { 0, 8 }, { -3, 12 }, { -1, 16 }, { 2, 20 }, { 6, 23 } } },
+  { at = 0.87, points = { { 2, -26 }, { -1, -20 }, { 3, -14 }, { 0, -8 }, { 4, -2 }, { 2, 4 }, { 5, 11 }, { 3, 18 }, { 6, 24 } } },
+  { at = 0.94, points = { { -16, 6 }, { -9, 3 }, { -4, 6 }, { 1, 3 }, { 7, 7 }, { 13, 4 } } },
+}
+
+local function drawCrackPath(points, fraction)
+  local segments = #points - 1
+  local exact = math.max(0, math.min(1, fraction)) * segments
+  local full = math.floor(exact)
+  local remainder = exact - full
+  for i = 1, full do
+    local a, b = points[i], points[i + 1]
+    love.graphics.line(a[1], a[2], b[1], b[2])
+  end
+  if full < segments and remainder > 0 then
+    local a, b = points[full + 1], points[full + 2]
+    love.graphics.line(a[1], a[2], a[1] + (b[1] - a[1]) * remainder, a[2] + (b[2] - a[2]) * remainder)
+  end
+end
+
 function render.egg(x, y, scale, opts)
   opts = opts or {}
+  local alpha = opts.alpha or 1
   love.graphics.push()
   love.graphics.translate(x, y)
   love.graphics.scale(scale, scale)
   local wobble = opts.wobble or 0
   love.graphics.rotate(wobble)
-  love.graphics.setColor(0, 0, 0, 0.18)
-  love.graphics.ellipse("fill", 0, 34, 26, 5)
-  love.graphics.setColor(0.86, 0.80, 0.63, 1)
+  if not opts.noShadow then
+    love.graphics.setColor(0, 0, 0, 0.18 * alpha)
+    love.graphics.ellipse("fill", 0, 34, 26, 5)
+  end
+  love.graphics.setColor(0.86, 0.80, 0.63, alpha)
   love.graphics.ellipse("fill", 0, 0, 22, 30)
-  love.graphics.setColor(0.94, 0.90, 0.76, 1)
+  love.graphics.setColor(0.94, 0.90, 0.76, alpha)
   love.graphics.ellipse("fill", -6, -8, 10, 16)
-  love.graphics.setColor(0.66, 0.56, 0.37, 1)
+  love.graphics.setColor(0.66, 0.56, 0.37, alpha)
   love.graphics.ellipse("line", 0, 0, 22, 30)
-  love.graphics.setColor(0.55, 0.46, 0.30, 0.7)
-  love.graphics.setLineWidth(1.4)
-  love.graphics.line(-12, -10, -4, -4, 2, -10, 9, -3)
-  love.graphics.line(-10, 10, -2, 15, 5, 9, 12, 14)
+  if not opts.clean then
+    love.graphics.setColor(0.55, 0.46, 0.30, 0.7 * alpha)
+    love.graphics.setLineWidth(1.4)
+    love.graphics.line(-12, -10, -4, -4, 2, -10, 9, -3)
+    love.graphics.line(-10, 10, -2, 15, 5, 9, 12, 14)
+  end
+
+  local crack = opts.crack or 0
+  if crack > 0 then
+    love.graphics.setLineWidth(1.45)
+    for _, path in ipairs(eggCracks) do
+      local fraction = (crack - path.at) / 0.20
+      if fraction > 0 then
+        love.graphics.setColor(0.32, 0.24, 0.14, 0.92 * alpha)
+        drawCrackPath(path.points, fraction)
+        love.graphics.setColor(0.97, 0.93, 0.82, 0.55 * alpha)
+        love.graphics.setLineWidth(0.7)
+        local points = path.points
+        for i = 1, #points - 1 do
+          local a, b = points[i], points[i + 1]
+          love.graphics.line(a[1] + 0.8, a[2] + 0.3, b[1] + 0.8, b[2] + 0.3)
+        end
+        love.graphics.setLineWidth(1.45)
+        if fraction >= 1 then
+          local tip = points[#points]
+          love.graphics.setColor(0.74, 0.66, 0.48, 0.95 * alpha)
+          love.graphics.polygon("fill", tip[1], tip[2], tip[1] + 2.2, tip[2] + 0.8, tip[1] + 0.8, tip[2] + 2.4)
+        end
+      end
+    end
+  end
+
   if opts.cross then
-    love.graphics.setColor(0.56, 0.78, 0.82, 0.9)
+    love.graphics.setColor(0.56, 0.78, 0.82, 0.9 * alpha)
     love.graphics.circle("line", 0, 0, 27)
   end
+  love.graphics.setLineWidth(1)
   love.graphics.pop()
 end
 
